@@ -21,4 +21,4 @@ Go-Trike is a Flutter-based mobile application designed to provide a seamless tr
 ### Installation
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/go-trike.git
+   git clone https://github.com/Keimana/go-trike.git
