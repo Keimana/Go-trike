@@ -1,16 +1,24 @@
-# demo_app
+# Go-Trike Mobile Booking System
 
-A new Flutter project.
+Go-Trike is a Flutter-based mobile application designed to provide a seamless tricycle booking experience specifically for residents and commuters in **Telebastagan, Pampanga**. The app connects passengers with local tricycle drivers, allowing for convenient and efficient transportation.
+
+## Features
+
+- **User Authentication**: Secure sign-up and login for passengers and drivers.
+- **Ride Booking**: Request rides with fare input and pickup location.
+- **Driver Queue Management**: Drivers can view and accept ride requests.
+- **Interactive Map**: Track trike locations in real-time.
+- **Ride History**: View past trips and payments.
+- **Ratings & Reviews**: Ensure service quality through passenger feedback.
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+### Prerequisites
+- Flutter SDK: [Install Flutter](https://docs.flutter.dev/get-started/install)
+- Dart SDK (included with Flutter)
+- Code editor (e.g., VS Code, Android Studio)
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Installation
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/yourusername/go-trike.git
