@@ -19,6 +19,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final passwordController = TextEditingController();
 
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
   String? _errorMessage;
 
   @override
@@ -215,6 +216,55 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
+  // Custom password field widget to match CustomTextField styling
+  Widget _buildPasswordField() {
+    return TextField(
+      controller: passwordController,
+      obscureText: !_isPasswordVisible,
+      style: const TextStyle(
+        fontFamily: 'Roboto',
+        fontSize: 16,
+      ),
+      decoration: InputDecoration(
+        hintText: "Password",
+        hintStyle: const TextStyle(
+          color: Colors.grey,
+          fontFamily: 'Roboto',
+        ),
+        filled: true,
+        fillColor: Colors.grey.shade100,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(
+            color: Color(0xFF0097B2),
+            width: 2,
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 16,
+        ),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _isPasswordVisible 
+                ? Icons.visibility 
+                : Icons.visibility_off,
+            color: Colors.grey,
+          ),
+          onPressed: () {
+            setState(() {
+              _isPasswordVisible = !_isPasswordVisible;
+            });
+          },
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -293,12 +343,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               const SizedBox(height: 12),
 
-              // Password input
-              CustomTextField(
-                hintText: "Password",
-                obscureText: true,
-                controller: passwordController,
-              ),
+              _buildPasswordField(),
               const SizedBox(height: 18),
 
               // Login button

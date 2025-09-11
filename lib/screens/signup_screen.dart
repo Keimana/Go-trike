@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
-import '../services/auth_service.dart'; // Adjust path as needed
+import '../services/auth_service.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -19,6 +19,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final confirmController = TextEditingController();
 
   bool _isLoading = false;
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
   String? _errorMessage;
 
   @override
@@ -36,7 +38,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
-  // Phone validation (basic)
+  // Phone validation
   bool _isValidPhone(String phone) {
     return RegExp(r'^\+?[\d\s\-\(\)]{10,}$').hasMatch(phone);
   }
@@ -92,7 +94,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required String password,
   }) async {
     try {
-      User? user = await authService.value.signUp(email, password);
+      User? user = await AuthService().signUp(email, password);
       
       if (user != null) {
         // Update user profile with additional info
@@ -100,16 +102,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         
         // Sign out immediately after account creation
         // This prevents automatic navigation to home screen
-        await authService.value.signOut();
-        
-        // You might want to store additional user data (name, phone) in Firestore here
-        // Example:
-        // await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        //   'name': name,
-        //   'phone': phone,
-        //   'email': email,
-        //   'createdAt': FieldValue.serverTimestamp(),
-        // });
+        await AuthService().signOut();
 
         return {
           'success': true,
@@ -206,13 +199,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       if (result['success']) {
-        // Sign out the user first to prevent auto-navigation
-        try {
-          await authService.value.signOut();
-        } catch (e) {
-          // Ignore sign out errors for now
-        }
-
         // Show success message
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -254,6 +240,67 @@ class _SignUpScreenState extends State<SignUpScreen> {
         });
       }
     }
+  }
+
+  // Custom password field widget that matches CustomTextField exactly
+  Widget _buildPasswordField({
+    required TextEditingController controller,
+    required String hintText,
+    required bool isVisible,
+    required VoidCallback onVisibilityToggle,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: !isVisible,
+        style: const TextStyle(
+          fontFamily: 'Roboto',
+          fontSize: 16,
+          color: Colors.black,
+        ),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: const TextStyle(
+            color: Colors.grey,
+            fontFamily: 'Roboto',
+            fontSize: 16,
+          ),
+          filled: false,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(
+              color: Color(0xFF0097B2),
+              width: 2,
+            ),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+          suffixIcon: IconButton(
+            icon: Icon(
+              isVisible 
+                  ? Icons.visibility 
+                  : Icons.visibility_off,
+              color: Colors.grey,
+            ),
+            onPressed: onVisibilityToggle,
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -344,17 +391,29 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                CustomTextField(
-                  hintText: "Password",
-                  obscureText: true,
+               
+                _buildPasswordField(
                   controller: passwordController,
+                  hintText: "Password",
+                  isVisible: _isPasswordVisible,
+                  onVisibilityToggle: () {
+                    setState(() {
+                      _isPasswordVisible = !_isPasswordVisible;
+                    });
+                  },
                 ),
                 const SizedBox(height: 12),
 
-                CustomTextField(
-                  hintText: "Confirm Password",
-                  obscureText: true,
+                
+                _buildPasswordField(
                   controller: confirmController,
+                  hintText: "Confirm Password",
+                  isVisible: _isConfirmPasswordVisible,
+                  onVisibilityToggle: () {
+                    setState(() {
+                      _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+                    });
+                  },
                 ),
                 const SizedBox(height: 18),
 
