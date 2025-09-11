@@ -72,4 +72,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'go-trike-14d3f.firebasestorage.app',
     iosBundleId: 'com.example.demoApp',
   );
+
 }
