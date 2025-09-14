@@ -22,6 +22,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   String? _errorMessage;
+  final AuthService _authService = AuthService();
 
   @override
   void dispose() {
@@ -86,7 +87,26 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return null;
   }
 
-  // Firebase authentication
+  // Email validation with existence check
+  Future<String?> _validateEmailField(String? value) async {
+    if (value == null || value.trim().isEmpty) {
+      return 'Email is required';
+    }
+    
+    if (!_isValidEmail(value)) {
+      return 'Please enter a valid email address';
+    }
+    
+    // Check if email already exists
+    bool emailExists = await _authService.doesEmailExist(value.trim());
+    if (emailExists) {
+      return 'An account already exists with this email address';
+    }
+    
+    return null;
+  }
+
+  // Firebase authentication with email verification
   Future<Map<String, dynamic>> _authenticateUser({
     required String name,
     required String phone,
@@ -94,21 +114,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required String password,
   }) async {
     try {
-      User? user = await AuthService().signUp(email, password);
+      User? user = await _authService.signUp(email, password);
       
       if (user != null) {
         // Update user profile with additional info
         await user.updateDisplayName(name);
         
-        // Sign out immediately after account creation
+        // Send email verification immediately after account creation (before signing out)
+        bool verificationSent = await _authService.sendEmailVerification(user);
+        
+        // Sign out immediately after sending verification email
         // This prevents automatic navigation to home screen
-        await AuthService().signOut();
+        await _authService.signOut();
 
-        return {
-          'success': true,
-          'message': 'Account created successfully!',
-          'user': user,
-        };
+        if (verificationSent) {
+          return {
+            'success': true,
+            'message': 'Account created successfully! Please check your email for verification.',
+            'user': user,
+            'verificationSent': true,
+          };
+        } else {
+          return {
+            'success': true,
+            'message': 'Account created successfully! Please verify your email before signing in.',
+            'user': user,
+            'verificationSent': false,
+          };
+        }
       } else {
         return {
           'success': false,
@@ -150,47 +183,184 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  // Handle sign up with manual validation
+  // Show success dialog with email verification instructions
+  void _showSuccessDialog(bool verificationSent) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            Icon(
+              Icons.check_circle,
+              color: Colors.green.shade600,
+              size: 28,
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Account Created!',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (verificationSent) ...[
+              const Text(
+                'Your account has been created successfully!',
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  border: Border.all(color: Colors.orange.shade200),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.email_outlined,
+                      color: Colors.orange.shade600,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Verify Your Email',
+                            style: TextStyle(
+                              fontFamily: 'Roboto',
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.orange.shade800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Please check your email and click the verification link. After clicking the link, return to the app and sign in normally.',
+                            style: TextStyle(
+                              fontFamily: 'Roboto',
+                              fontSize: 12,
+                              color: Colors.orange.shade700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ] else ...[
+              const Text(
+                'Your account has been created successfully! You can now sign in.',
+                style: TextStyle(
+                  fontFamily: 'Roboto',
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop(); // Close dialog
+              // Navigate back to sign-in screen
+              Navigator.of(context).popUntil((route) => route.isFirst);
+              Navigator.pushReplacementNamed(context, '/signin');
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF0097B2),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text(
+              'Go to Sign In',
+              style: TextStyle(
+                fontFamily: 'Roboto',
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Handle sign up with optimized validation
   Future<void> _handleSignUp() async {
     // Clear previous error
     setState(() {
       _errorMessage = null;
-    });
-
-    // Manual validation since Form validation isn't available
-    String? nameError = _validateField(nameController.text, 'Name');
-    String? phoneError = _validateField(phoneController.text, 'Phone Number');
-    String? emailError = _validateField(emailController.text, 'Email');
-    String? passwordError = _validateField(passwordController.text, 'Password');
-    String? confirmError = _validateField(confirmController.text, 'Confirm Password');
-
-    // Check for validation errors
-    if (nameError != null) {
-      setState(() => _errorMessage = nameError);
-      return;
-    }
-    if (phoneError != null) {
-      setState(() => _errorMessage = phoneError);
-      return;
-    }
-    if (emailError != null) {
-      setState(() => _errorMessage = emailError);
-      return;
-    }
-    if (passwordError != null) {
-      setState(() => _errorMessage = passwordError);
-      return;
-    }
-    if (confirmError != null) {
-      setState(() => _errorMessage = confirmError);
-      return;
-    }
-
-    setState(() {
       _isLoading = true;
     });
 
     try {
+      // Manual validation for non-async fields first
+      String? nameError = _validateField(nameController.text, 'Name');
+      String? phoneError = _validateField(phoneController.text, 'Phone Number');
+      String? passwordError = _validateField(passwordController.text, 'Password');
+      String? confirmError = _validateField(confirmController.text, 'Confirm Password');
+
+      // Check for validation errors (non-async fields)
+      if (nameError != null) {
+        setState(() {
+          _errorMessage = nameError;
+          _isLoading = false;
+        });
+        return;
+      }
+      if (phoneError != null) {
+        setState(() {
+          _errorMessage = phoneError;
+          _isLoading = false;
+        });
+        return;
+      }
+      if (passwordError != null) {
+        setState(() {
+          _errorMessage = passwordError;
+          _isLoading = false;
+        });
+        return;
+      }
+      if (confirmError != null) {
+        setState(() {
+          _errorMessage = confirmError;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Async email validation (includes existence check)
+      String? emailError = await _validateEmailField(emailController.text);
+      if (emailError != null) {
+        setState(() {
+          _errorMessage = emailError;
+          _isLoading = false;
+        });
+        return;
+      }
+
       final result = await _authenticateUser(
         name: nameController.text.trim(),
         phone: phoneController.text.trim(),
@@ -199,31 +369,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
       );
 
       if (result['success']) {
-        // Show success message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message']),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+        // Clear form fields
+        nameController.clear();
+        phoneController.clear();
+        emailController.clear();
+        passwordController.clear();
+        confirmController.clear();
 
-          // Clear form fields
-          nameController.clear();
-          phoneController.clear();
-          emailController.clear();
-          passwordController.clear();
-          confirmController.clear();
-
-          // Navigate back to sign-in screen with a slight delay
-          Future.delayed(const Duration(milliseconds: 300), () {
-            if (mounted) {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-              Navigator.pushReplacementNamed(context, '/signin');
-            }
-          });
-        }
+        // Show success dialog with email verification instructions
+        _showSuccessDialog(result['verificationSent'] ?? false);
       } else {
         setState(() {
           _errorMessage = result['message'];

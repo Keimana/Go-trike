@@ -55,7 +55,7 @@ class _SignInScreenState extends State<SignInScreen> {
     return null;
   }
 
-  // Firebase authentication
+  // Firebase authentication with email verification check
   Future<Map<String, dynamic>> _authenticateUser({
     required String email,
     required String password,
@@ -64,6 +64,18 @@ class _SignInScreenState extends State<SignInScreen> {
       User? user = await authService.signIn(email, password);
       
       if (user != null) {
+        // Check if email is verified
+        bool isVerified = await authService.isEmailVerified();
+        
+        if (!isVerified) {
+          return {
+            'success': false,
+            'message': 'Please verify your email address before signing in.',
+            'needsVerification': true,
+            'user': user,
+          };
+        }
+        
         return {
           'success': true,
           'message': 'Welcome back!',
@@ -164,6 +176,9 @@ class _SignInScreenState extends State<SignInScreen> {
             MaterialPageRoute(builder: (context) => const HomePage()),
           );
         }
+      } else if (result['needsVerification'] == true) {
+        // Show email verification dialog
+        _showEmailVerificationBottomSheet();
       } else {
         setState(() {
           _errorMessage = result['message'];
@@ -180,6 +195,207 @@ class _SignInScreenState extends State<SignInScreen> {
         });
       }
     }
+  }
+
+  // Show email verification bottom sheet
+  void _showEmailVerificationBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Email verification icon
+              Icon(
+                Icons.email_outlined,
+                size: 64,
+                color: Colors.orange.shade400,
+              ),
+              const SizedBox(height: 16),
+              
+              const Text(
+                'Verify Your Email',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  fontFamily: 'Roboto',
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              Text(
+                'Please check your email and click the verification link to activate your account.',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                  fontFamily: 'Roboto',
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              
+              // Resend verification email button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    try {
+                      // Sign in again to get the user object for sending verification
+                      User? user = await authService.signIn(
+                        emailController.text.trim(), 
+                        passwordController.text
+                      );
+                      
+                      if (user != null) {
+                        bool sent = await authService.sendEmailVerification(user);
+                        
+                        // Sign out immediately after sending verification
+                        await authService.signOut();
+                        
+                        if (sent) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Verification email sent! Please check your inbox.'),
+                              backgroundColor: Colors.green,
+                              duration: Duration(seconds: 3),
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Failed to send verification email. Please try again.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Failed to resend verification email.'),
+                            backgroundColor: Colors.red,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Error sending verification email.'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0097B2),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'Resend Verification Email',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Roboto',
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // I've verified button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    Navigator.pop(context); // Close bottom sheet
+                    
+                    // Check verification status
+                    bool isVerified = await authService.isEmailVerified();
+                    if (isVerified) {
+                      // Navigate to home page
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Email verified successfully!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) => const HomePage()),
+                        );
+                      }
+                    } else {
+                      // Show error
+                      if (mounted) {
+                        setState(() {
+                          _errorMessage = 'Email not verified yet. Please check your email and try again.';
+                        });
+                      }
+                    }
+                  },
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Color(0xFF0097B2)),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: const Text(
+                    'I\'ve Verified My Email',
+                    style: TextStyle(
+                      color: Color(0xFF0097B2),
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: 'Roboto',
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              
+              // Cancel button
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  authService.signOut(); // Sign out the unverified user
+                },
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontFamily: 'Roboto',
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   // Handle forgot password

@@ -30,6 +30,51 @@ class AuthService {
     }
   }
 
+  // Send email verification
+  Future<bool> sendEmailVerification([User? userToVerify]) async {
+    try {
+      User? user = userToVerify ?? _auth.currentUser;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+        print('Verification email sent to: ${user.email}');
+        return true;
+      }
+      print('User is null or already verified');
+      return false;
+    } catch (e) {
+      print('Error in sendEmailVerification: $e');
+      return false;
+    }
+  }
+
+  // Check if email exists (for signup validation)
+  Future<bool> doesEmailExist(String email) async {
+    try {
+      final signInMethods = await _auth.fetchSignInMethodsForEmail(email);
+      return signInMethods.isNotEmpty;
+    } catch (e) {
+      print('Error checking email existence: $e');
+      return false;
+    }
+  }
+
+  // Check if email is verified
+  Future<bool> isEmailVerified() async {
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        // Reload user to get the latest email verification status
+        await user.reload();
+        user = _auth.currentUser; // Get the refreshed user
+        return user?.emailVerified ?? false;
+      }
+      return false;
+    } catch (e) {
+      print('Error in isEmailVerified: $e');
+      return false;
+    }
+  }
+
   // Send password reset email
   Future<void> sendPasswordResetEmail(String email) async {
     try {
