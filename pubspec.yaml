@@ -94,11 +94,12 @@ flutter:
     - assets/icons/description.svg
     - assets/icons/person.svg
     - assets/icons/settings.svg
-
+    - assets/icons/edit.svg
+    - assets/icons/help.svg
+    - assets/icons/place.svg
   fonts:
     - family: Roboto
       fonts:
         - asset: assets/fonts/Roboto-Regular.ttf
         - asset: assets/fonts/Roboto-Bold.ttf
           weight: 700
-

@@ -1,38 +1,67 @@
 import 'package:flutter/material.dart';
+import 'timer_modal.dart'; // <-- Group53
 
-/// A rounded "Request Trike" call-to-action button.
-/// It keeps the exact styling from the design file.
-class RequestTrikeButton extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const RequestTrikeButton({
-    super.key,
-    required this.onTap,
-  });
+class RequestTrikeModal extends StatelessWidget {
+  const RequestTrikeModal({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 268,
-        height: 60,
-        decoration: ShapeDecoration(
-          color: const Color(0xFF0097B2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+    return Container(
+      height: 600, // adjust if needed
+      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Stack(
+        children: [
+          // Title
+          const Positioned(
+            top: 10,
+            left: 0,
+            right: 0,
+            child: Text(
+              "Request a Trike",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-        ),
-        alignment: Alignment.center,
-        child: const Text(
-          'Request Trike',
-          style: TextStyle(
-            color: Color(0xFFF0F0F0),
-            fontSize: 20,
-            fontFamily: 'Roboto',
-            fontWeight: FontWeight.w700,
+
+          // Button
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 30,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0097B2),
+                minimumSize: const Size(366, 55),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: () {
+                Navigator.pop(context); // close bottom modal
+                showDialog(
+                  context: context,
+                  barrierDismissible: false, // prevent closing by tap outside
+                  builder: (context) => const TimerModal(), // popup in center
+                );
+              },
+              child: const Text(
+                'Request a Ride',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

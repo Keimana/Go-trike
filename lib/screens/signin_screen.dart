@@ -65,7 +65,7 @@ class _SignInScreenState extends State<SignInScreen> {
       if (user != null) {
         return {
           'success': true,
-          'message': 'Welcome back!',
+          'message': ' ',
           'user': user,
         };
       } else {

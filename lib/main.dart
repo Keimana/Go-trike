@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import 'User - Screens/signin_screen.dart';
-import 'User - Screens/signup_screen.dart';
-import 'User - Screens/forgot_password.dart';
-import 'User - Screens/home_page.dart';
-import 'User - Screens/help.dart';
-import 'User - Screens/edit_profile.dart';
-
-void main() {
+import 'screens/signup_screen.dart';
+import 'screens/forgot_password.dart';
+import 'screens/home_page.dart';
+import 'screens/edit_profile.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'screens/help.dart';
+import 'screens/signin_screen.dart';
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const GoTrikeApp());
 }
 
@@ -23,15 +28,16 @@ class GoTrikeApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0097B2)),
       ),
-      // First screen to open
+      // first screen to open
       initialRoute: '/',
       routes: {
-        '/': (context) => const SignInScreen(),
+        '/': (context) => const HomePage(),
+        '/signin': (context) => const SignInScreen(),
         '/signup': (context) => const SignUpScreen(),
         '/forgot': (context) => ForgotPasswordScreen(),
-        '/home': (context) => const HomePage(),
-        '/help': (context) => const HelpScreen(),
         '/edit-profile': (context) => const EditProfileScreen(),
+        '/help': (context) => const HelpScreen(),
+
       },
     );
   }

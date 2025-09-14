@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
 import '../services/auth_service.dart'; // Adjust path as needed
+import '../widgets/signup_email_verify.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -205,40 +206,34 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password: passwordController.text,
       );
 
-      if (result['success']) {
-        // Sign out the user first to prevent auto-navigation
-        try {
-          await authService.value.signOut();
-        } catch (e) {
-          // Ignore sign out errors for now
-        }
+    if (result['success']) {
+      // Sign out the user first to prevent auto-navigation
+      try {
+        await authService.value.signOut();
+      } catch (e) {
+        // Ignore sign out errors for now
+      }
 
-        // Show success message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message']),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
+      if (mounted) {
+        // Clear form fields
+        nameController.clear();
+        phoneController.clear();
+        emailController.clear();
+        passwordController.clear();
+        confirmController.clear();
 
-          // Clear form fields
-          nameController.clear();
-          phoneController.clear();
-          emailController.clear();
-          passwordController.clear();
-          confirmController.clear();
-
-          // Navigate back to sign-in screen with a slight delay
-          Future.delayed(const Duration(milliseconds: 300), () {
-            if (mounted) {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-              Navigator.pushReplacementNamed(context, '/signin');
-            }
-          });
-        }
-      } else {
+        // Show modal email verify
+        showDialog(
+          context: context,
+          barrierDismissible: false, // user must interact with buttons
+          builder: (context) => const Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: EdgeInsets.all(16),
+            child: SignupEmailVerify(),
+          ),
+        );
+      }
+    } else {
         setState(() {
           _errorMessage = result['message'];
         });

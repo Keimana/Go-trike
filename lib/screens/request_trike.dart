@@ -37,7 +37,7 @@ class _MainScreenMap extends StatelessWidget {
                   width: 320,
                   height: 62,
                   decoration: ShapeDecoration(
-                    color: Color(0xFFF8FAFB),
+                    color: const Color(0xFFF8FAFB),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -179,15 +179,15 @@ class _MainScreenMap extends StatelessWidget {
                 child: Container(
                   width: 412,
                   height: 489,
-                  decoration: ShapeDecoration(
+                  decoration: const ShapeDecoration(
                     color: Colors.white,
-                    shape: const RoundedRectangleBorder(
+                    shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.only(
                         topLeft: Radius.circular(30),
                         topRight: Radius.circular(30),
                       ),
                     ),
-                    shadows: const [
+                    shadows: [
                       BoxShadow(
                         color: Color(0x3F000000),
                         blurRadius: 4,
@@ -301,7 +301,7 @@ class _MainScreenMap extends StatelessWidget {
                   decoration: ShapeDecoration(
                     color: Colors.white,
                     shape: RoundedRectangleBorder(
-                      side: BorderSide(width: 1, color: Color(0xFF0097B2)),
+                      side: const BorderSide(width: 1, color: Color(0xFF0097B2)),
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
