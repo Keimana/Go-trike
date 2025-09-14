@@ -81,14 +81,14 @@ class _MainScreenContentState extends State<MainScreenContent> {
           ),
         ),
 
-        /// 🔹 Settings Button (top-right)
+        /// Settings Button (top-right)
         Positioned(
           top: h * 0.04,
           right: w * 0.04,
           child: const SettingsButton(),
         ),
 
-        /// 🔹 Request Trike Button (center-bottom)
+        /// Request Trike Button (center-bottom)
         Positioned(
           bottom: h * 0.15,
           left: (w - buttonWidth) / 2,
@@ -125,3 +125,4 @@ class _MainScreenContentState extends State<MainScreenContent> {
     );
   }
 }
+
