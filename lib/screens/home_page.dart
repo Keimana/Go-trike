@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart'; 
 import '../widgets/navigation_bar.dart';
 import '../widgets/settings_button.dart';
 import '../widgets/timer_modal.dart';
@@ -37,8 +38,22 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class MainScreenContent extends StatelessWidget {
+class MainScreenContent extends StatefulWidget {
   const MainScreenContent({super.key});
+
+  @override
+  State<MainScreenContent> createState() => _MainScreenContentState();
+}
+
+class _MainScreenContentState extends State<MainScreenContent> {
+  late GoogleMapController mapController;
+
+  // 🔹 Default map position (Manila, Philippines for example)
+  final LatLng _initialPosition = const LatLng(14.5995, 120.9842);
+
+  void _onMapCreated(GoogleMapController controller) {
+    mapController = controller;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,17 +65,19 @@ class MainScreenContent extends StatelessWidget {
 
     return Stack(
       children: [
-        /// 🔹 Google Maps Placeholder (Full screen space)
+        /// 🔹 Google Maps Widget (Full screen space)
         SizedBox(
           width: w,
           height: h,
-          child: Container(
-            color: Colors.grey[300],
-            alignment: Alignment.center,
-            child: const Text(
-              "Google Maps API will render here",
-              style: TextStyle(fontSize: 18, color: Colors.black54),
+          child: GoogleMap(
+            onMapCreated: _onMapCreated,
+            initialCameraPosition: CameraPosition(
+              target: _initialPosition,
+              zoom: 14.0,
             ),
+            myLocationEnabled: true,
+            myLocationButtonEnabled: true,
+            zoomControlsEnabled: false,
           ),
         ),
 
@@ -77,8 +94,6 @@ class MainScreenContent extends StatelessWidget {
           left: (w - buttonWidth) / 2,
           child: GestureDetector(
             onTap: () {
-              // Instead of modal bottom sheet (slides from bottom)
-              // show a dialog in the center
               showDialog(
                 context: context,
                 barrierDismissible: false,
