@@ -159,7 +159,7 @@ class ActivityLogsScreen extends StatelessWidget {
                                 
                               ],
                             );
-                          }).toList(),
+                          }),
 
                           SizedBox(height: h * 0.04),
                         ],
