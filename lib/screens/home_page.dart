@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart'; 
 import '../widgets/navigation_bar.dart';
 import '../widgets/settings_button.dart';
 import '../widgets/timer_modal.dart';
@@ -38,22 +37,8 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class MainScreenContent extends StatefulWidget {
+class MainScreenContent extends StatelessWidget {
   const MainScreenContent({super.key});
-
-  @override
-  State<MainScreenContent> createState() => _MainScreenContentState();
-}
-
-class _MainScreenContentState extends State<MainScreenContent> {
-  late GoogleMapController mapController;
-
-  // 🔹 Default map position (Manila, Philippines for example)
-  final LatLng _initialPosition = const LatLng(14.5995, 120.9842);
-
-  void _onMapCreated(GoogleMapController controller) {
-    mapController = controller;
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,29 +50,30 @@ class _MainScreenContentState extends State<MainScreenContent> {
 
     return Stack(
       children: [
-        SizedBox(
+        /// 🔹 Background placeholder instead of Google Map
+        Container(
           width: w,
           height: h,
-          child: GoogleMap(
-            onMapCreated: _onMapCreated,
-            initialCameraPosition: CameraPosition(
-              target: _initialPosition,
-              zoom: 14.0,
+          color: const Color(0xFFEFEFEF), // light gray background
+          alignment: Alignment.center,
+          child: const Text(
+            'Map Placeholder',
+            style: TextStyle(
+              fontSize: 18,
+              color: Colors.black54,
+              fontWeight: FontWeight.w500,
             ),
-            myLocationEnabled: true,
-            myLocationButtonEnabled: true,
-            zoomControlsEnabled: false,
           ),
         ),
 
-        /// 🔹 Settings Button (top-right)
+        /// Settings Button (top-right)
         Positioned(
           top: h * 0.04,
           right: w * 0.04,
           child: const SettingsButton(),
         ),
 
-        /// 🔹 Request Trike Button (center-bottom)
+        /// Request Trike Button (center-bottom)
         Positioned(
           bottom: h * 0.15,
           left: (w - buttonWidth) / 2,
