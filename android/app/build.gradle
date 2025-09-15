@@ -1,10 +1,9 @@
 plugins {
     id "com.android.application"
-    // START: FlutterFire Configuration
-    id 'com.google.gms.google-services'
-    // END: FlutterFire Configuration
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
+    // ✅ FlutterFire plugin goes here (no apply at bottom)
+    id "com.google.gms.google-services"
 }
 
 def localProperties = new Properties()
@@ -15,15 +14,8 @@ if (localPropertiesFile.exists()) {
     }
 }
 
-def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
-if (flutterVersionCode == null) {
-    flutterVersionCode = '1'
-}
-
-def flutterVersionName = localProperties.getProperty('flutter.versionName')
-if (flutterVersionName == null) {
-    flutterVersionName = '1.0'
-}
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode') ?: '1'
+def flutterVersionName = localProperties.getProperty('flutter.versionName') ?: '1.0'
 
 android {
     namespace "com.example.demo_app"
@@ -31,12 +23,13 @@ android {
     ndkVersion flutter.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_11
-        targetCompatibility JavaVersion.VERSION_11
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+        coreLibraryDesugaringEnabled true
     }
 
     kotlinOptions {
-        jvmTarget = '11'
+        jvmTarget = '17'
     }
 
     sourceSets {
@@ -45,20 +38,14 @@ android {
 
     defaultConfig {
         applicationId "com.example.demo_app"
-
-        // ✅ Firebase requires 21 or higher
-        minSdkVersion 21
-
-        // ✅ Use the latest stable SDK (adjust if Flutter complains)
+        minSdkVersion 23
         targetSdkVersion 34
-
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
             signingConfig signingConfigs.debug
         }
     }
@@ -69,12 +56,16 @@ flutter {
 }
 
 dependencies {
-    // ✅ Force Kotlin version to match your top-level build.gradle (1.8.22)
-    configurations.all {
-        resolutionStrategy {
-            force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
-            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
-            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
-        }
-    }
+    // ✅ Firebase BoM (auto-manages Firebase versions)
+    implementation platform('com.google.firebase:firebase-bom:33.1.2')
+
+    // Firebase dependencies
+    implementation "com.google.firebase:firebase-auth"
+    implementation "com.google.firebase:firebase-messaging"
+
+    // Google Maps
+    implementation "com.google.android.gms:play-services-maps:18.2.0"
+
+    // Desugaring support
+    coreLibraryDesugaring "com.android.tools:desugar_jdk_libs:2.0.4"
 }

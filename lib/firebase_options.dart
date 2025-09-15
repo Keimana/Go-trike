@@ -47,29 +47,29 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBcARkwcgQqYx0KMyM0V8ely5yAvGQSwnE',
-    appId: '1:516749431216:web:6a4cf10a9b1353096a8675',
-    messagingSenderId: '516749431216',
-    projectId: 'go-trike-14d3f',
-    authDomain: 'go-trike-14d3f.firebaseapp.com',
-    storageBucket: 'go-trike-14d3f.firebasestorage.app',
-    measurementId: 'G-V3FF7FP9VM',
+    apiKey: 'AIzaSyAYQ4FLQjpcJj_1WXXeGfcPHBrLj7qNGWU',
+    appId: '1:885390230612:web:652aca0a81955385e4d9c1',
+    messagingSenderId: '885390230612',
+    projectId: 'primeval-rune-471911-g6',
+    authDomain: 'primeval-rune-471911-g6.firebaseapp.com',
+    storageBucket: 'primeval-rune-471911-g6.firebasestorage.app',
+    measurementId: 'G-6PTDLVDVDN',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAAclw7DcrXMH8xY7bAhZx7W7F-jcLhYJM',
-    appId: '1:516749431216:android:7093ca3f2cfee8cb6a8675',
-    messagingSenderId: '516749431216',
-    projectId: 'go-trike-14d3f',
-    storageBucket: 'go-trike-14d3f.firebasestorage.app',
+    apiKey: 'AIzaSyCAOPEoNxB-CrsXtTXdTpXgkp55Az5I0ao',
+    appId: '1:885390230612:android:1efb1ee096220899e4d9c1',
+    messagingSenderId: '885390230612',
+    projectId: 'primeval-rune-471911-g6',
+    storageBucket: 'primeval-rune-471911-g6.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyCzzgb_z-TmnKl1de2ns_DdMzBY0Mx5r7A',
-    appId: '1:516749431216:ios:427add6d47f2ee6b6a8675',
-    messagingSenderId: '516749431216',
-    projectId: 'go-trike-14d3f',
-    storageBucket: 'go-trike-14d3f.firebasestorage.app',
+    apiKey: 'AIzaSyDaLPh7VQ-IoMW6S7yxNJ_HNuD16HIO1Es',
+    appId: '1:885390230612:ios:6f89a2363e0f069fe4d9c1',
+    messagingSenderId: '885390230612',
+    projectId: 'primeval-rune-471911-g6',
+    storageBucket: 'primeval-rune-471911-g6.firebasestorage.app',
     iosBundleId: 'com.example.demoApp',
   );
 

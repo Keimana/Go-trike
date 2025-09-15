@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "516749431216",
-    "project_id": "go-trike-14d3f",
-    "storage_bucket": "go-trike-14d3f.firebasestorage.app"
+    "project_number": "885390230612",
+    "project_id": "primeval-rune-471911-g6",
+    "storage_bucket": "primeval-rune-471911-g6.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:516749431216:android:7093ca3f2cfee8cb6a8675",
+        "mobilesdk_app_id": "1:885390230612:android:1efb1ee096220899e4d9c1",
         "android_client_info": {
           "package_name": "com.example.demo_app"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAAclw7DcrXMH8xY7bAhZx7W7F-jcLhYJM"
+          "current_key": "AIzaSyCAOPEoNxB-CrsXtTXdTpXgkp55Az5I0ao"
         }
       ],
       "services": {
