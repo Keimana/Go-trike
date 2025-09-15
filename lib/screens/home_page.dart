@@ -50,7 +50,6 @@ class MainScreenContent extends StatelessWidget {
 
     return Stack(
       children: [
-        /// 🔹 Background placeholder instead of Google Map
         Container(
           width: w,
           height: h,
