@@ -4,6 +4,7 @@ import '../widgets/settings_button.dart';
 import '../widgets/timer_modal.dart';
 import 'activity_logs_screen.dart';
 import 'account_settings_screen.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -50,19 +51,14 @@ class MainScreenContent extends StatelessWidget {
 
     return Stack(
       children: [
-        Container(
-          width: w,
-          height: h,
-          color: const Color(0xFFEFEFEF), // light gray background
-          alignment: Alignment.center,
-          child: const Text(
-            'Map Placeholder',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.black54,
-              fontWeight: FontWeight.w500,
-            ),
+        /// Google Map
+        const GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: LatLng(15.1159, 120.6075), 
+            zoom: 15.0,
           ),
+          myLocationEnabled: true,
+          myLocationButtonEnabled: true,
         ),
 
         /// Settings Button (top-right)
