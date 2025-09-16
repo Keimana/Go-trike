@@ -61,10 +61,10 @@ class _ReportTodaScreenState extends State<ReportTodaScreen> {
                 ),
               ),
               // Success text
-              Positioned(
+              const Positioned(
                 left: 65,
                 top: 146,
-                child: const Text(
+                child: Text(
                   'Thanks for Reporting!',
                   style: TextStyle(
                     color: Colors.black,

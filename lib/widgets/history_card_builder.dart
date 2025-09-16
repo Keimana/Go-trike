@@ -62,7 +62,7 @@ class HistoryCardBuilder extends StatelessWidget {
                       color: Colors.black87,
                     ),
                   ),
-                  Spacer(), // push button to the right
+                  const Spacer(), // push button to the right
                   ElevatedButton(
                     onPressed: onActionTap,
                     style: ElevatedButton.styleFrom(

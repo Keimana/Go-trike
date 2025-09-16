@@ -31,12 +31,13 @@ android {
     ndkVersion flutter.ndkVersion
 
     compileOptions {
+        // ✅ Force Java 11 for Firebase & Google Maps
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = '11'
+        jvmTarget = "11"
     }
 
     sourceSets {
@@ -46,20 +47,24 @@ android {
     defaultConfig {
         applicationId "com.example.demo_app"
 
-        // ✅ Firebase requires 21 or higher
-        minSdkVersion 21
+        // ✅ Firebase Auth now requires minSdk 23
+        minSdkVersion 23
 
-        // ✅ Use the latest stable SDK (adjust if Flutter complains)
-        targetSdkVersion 34
+        // ✅ Match Flutter's recommended target
+        targetSdkVersion flutter.targetSdkVersion
 
         versionCode flutterVersionCode.toInteger()
         versionName flutterVersionName
+
+        // ✅ Prevent dexing issues when using Firebase
+        multiDexEnabled true
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
             signingConfig signingConfigs.debug
+            minifyEnabled false    // Disable shrinking until release signing is set
+            shrinkResources false
         }
     }
 }
