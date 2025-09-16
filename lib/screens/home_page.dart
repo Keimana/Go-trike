@@ -49,19 +49,28 @@ class MainScreenContent extends StatelessWidget {
     final buttonWidth = w * 0.65;
     const buttonHeight = 60.0;
 
+    /// Tight bounds
+    final LatLngBounds telabastaganBounds = LatLngBounds(
+      southwest: const LatLng(15.1140, 120.6125), // bottom-left
+      northeast: const LatLng(15.1195, 120.6185), // top-right
+    );
+
     return Stack(
       children: [
         /// Google Map
-        const GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: LatLng(15.1159, 120.6075), 
-            zoom: 15.0,
+        GoogleMap(
+          initialCameraPosition: const CameraPosition(
+            target: LatLng(15.116888, 120.615710), // Telabastagan
+            zoom: 16.0, 
           ),
           myLocationEnabled: true,
           myLocationButtonEnabled: true,
+
+          // Restrict navigation only inside this vicinity
+          cameraTargetBounds: CameraTargetBounds(telabastaganBounds),
+          minMaxZoomPreference: const MinMaxZoomPreference(16, 20),
         ),
 
-        /// Settings Button (top-right)
         Positioned(
           top: h * 0.04,
           right: w * 0.04,
