@@ -50,143 +50,133 @@ class ActivityLogsScreen extends StatelessWidget {
         "pickup": "Terminal 4",
       },
     ],
-
   };
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final w = constraints.maxWidth;
-            final h = constraints.maxHeight;
+    final w = MediaQuery.of(context).size.width;
+    final h = MediaQuery.of(context).size.height;
+    final safeTop = MediaQuery.of(context).padding.top;
 
-            return Stack(
-              children: [
-                SingleChildScrollView(
-                  padding: EdgeInsets.symmetric(vertical: h * 0.02),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 600),
-                      child: Column(
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Scrollable content
+          SingleChildScrollView(
+            padding: EdgeInsets.symmetric(vertical: h * 0.02),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(height: h * 0.12), // space for floating button
+
+                    // Screen title
+                    Padding(
+                      padding: EdgeInsets.symmetric(horizontal: w * 0.03),
+                      child: const Text(
+                        'Activity Logs',
+                        style: TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+
+                    SizedBox(height: h * 0.02),
+
+                    // Logs grouped by date
+                    ...logsByDate.entries.map((entry) {
+                      final sectionTitle = entry.key;
+                      final logs = entry.value;
+
+                      return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: h * 0.12), // space for floating button
-
-                          // Screen title
                           Padding(
                             padding: EdgeInsets.symmetric(horizontal: w * 0.03),
-                            child: const Text(
-                              'Activity Logs',
+                            child: Text(
+                              sectionTitle,
                               style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
+                                fontSize: w * 0.045,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
 
-                          SizedBox(height: h * 0.02),
+                          SizedBox(height: h * 0.008),
 
-                          // Logs grouped by date
-                          ...logsByDate.entries.map((entry) {
-                            final sectionTitle = entry.key;
-                            final logs = entry.value;
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Section title aligned with cards
-                                Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: w * 0.03),
-                                  child: Text(
-                                    sectionTitle,
-                                    style: TextStyle(
-                                      fontSize: w * 0.045,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                          // Divider
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: w * 0.03, vertical: h * 0.01),
+                            child: Container(
+                              width: w * 0.9,
+                              height: 0.5,
+                              decoration: const ShapeDecoration(
+                                shape: RoundedRectangleBorder(
+                                  side: BorderSide(
+                                    width: 0.5,
+                                    strokeAlign: BorderSide.strokeAlignCenter,
+                                    color: Color.fromARGB(255, 179, 179, 179),
                                   ),
                                 ),
+                              ),
+                            ),
+                          ),
 
-                                SizedBox(height: h * 0.008),
+                          SizedBox(height: h * 0.01),
 
-                                      // Divider with less width and padding
-                                      Padding(
-                                        padding: EdgeInsets.symmetric(horizontal: w * 0.03, vertical: h * 0.01),
-                                        child: Container(
-                                          width: w * 0.9, // less than full width
-                                          height: 0.5,
-                                          decoration: const ShapeDecoration(
-                                            shape: RoundedRectangleBorder(
-                                              side: BorderSide(
-                                                width: 0.5,
-                                                strokeAlign: BorderSide.strokeAlignCenter,
-                                                color: Color.fromARGB(255, 179, 179, 179),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-
-
-                                SizedBox(height: h * 0.01),
-
-                                // History cards
-                                ...logs.map(
-                                    (log) => Padding(
-                                      padding: EdgeInsets.only(bottom: h * 0.02, left: w * 0.03),
-                                      child: HistoryCardBuilder(
-                                        title: log["title"] ?? "",
-                                        price: log["price"] ?? "",
-                                        subtitle: log["subtitle"] ?? "",
+                          // History cards
+                          ...logs.map(
+                            (log) => Padding(
+                              padding: EdgeInsets.only(bottom: h * 0.02, left: w * 0.03),
+                              child: HistoryCardBuilder(
+                                title: log["title"] ?? "",
+                                price: log["price"] ?? "",
+                                subtitle: log["subtitle"] ?? "",
+                                toda: log["toda"] ?? "",
+                                pickup: log["pickup"] ?? "",
+                                locationHistory: log["locationHistory"] ?? "-",
+                                onActionTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ReportTodaScreen(
                                         toda: log["toda"] ?? "",
-                                        pickup: log["pickup"] ?? "",
-                                        locationHistory: log["locationHistory"] ?? "-", // <-- added
-                                        onActionTap: () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) => ReportTodaScreen(
-                                                toda: log["toda"] ?? "",
-                                              ),
-                                            ),
-                                          );
-                                        },
                                       ),
                                     ),
-
-                                  ),
-                                
-                              ],
-                            );
-                          }),
-
-                          SizedBox(height: h * 0.04),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
                         ],
-                      ),
-                    ),
-                  ),
-                ),
-
-                // Floating top-right Settings button
-                Positioned(
-                  top: h * 0.04,
-                  right: w * 0.04,
-                  child: SettingsButton(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SettingsScreen(),
-                        ),
                       );
-                    },
-                  ),
+                    }),
+
+                    SizedBox(height: h * 0.04),
+                  ],
                 ),
-              ],
-            );
-          },
-        ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            top: safeTop + h * 0.02, // safe distance + proportional offset
+            right: w * 0.04,
+            child: SettingsButton(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

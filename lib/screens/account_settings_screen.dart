@@ -17,6 +17,7 @@ class AccountSettingsScreen extends StatelessWidget {
           builder: (context, constraints) {
             final w = constraints.maxWidth;
             final h = constraints.maxHeight;
+            final safeTop = MediaQuery.of(context).padding.top;
 
             final cardWidth = w * 0.9;
             final profileCardHeight = h * 0.13;
@@ -87,20 +88,18 @@ class AccountSettingsScreen extends StatelessWidget {
 
 
                 // Top-right Settings button
-                Align(
-                  alignment: Alignment.topRight,
-                  child: Padding(
-                    padding: EdgeInsets.all(w * 0.04),
-                    child: SettingsButton(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SettingsScreen(),
-                          ),
-                        );
-                      },
-                    ),
+                Positioned(
+                  top: safeTop + h * 0.02, // safe distance + proportional offset
+                  right: w * 0.04,
+                  child: SettingsButton(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SettingsScreen(),
+                        ),
+                      );
+                    },
                   ),
                 ),
               ],

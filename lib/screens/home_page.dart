@@ -24,6 +24,7 @@ class _HomePageState extends State<HomePage> {
       const AccountSettingsScreen(), // index 2 → Account Settings
     ];
 
+
     return Scaffold(
       body: Stack(
         children: [
@@ -46,13 +47,16 @@ class MainScreenContent extends StatelessWidget {
     final w = MediaQuery.of(context).size.width;
     final h = MediaQuery.of(context).size.height;
 
+    // Safe top padding (status bar)
+    final safeTop = MediaQuery.of(context).padding.top;
+
     final buttonWidth = w * 0.65;
     const buttonHeight = 60.0;
 
     /// Tight bounds
     final LatLngBounds telabastaganBounds = LatLngBounds(
-      southwest: const LatLng(15.1140, 120.6125), // bottom-left
-      northeast: const LatLng(15.1195, 120.6185), // top-right
+      southwest: const LatLng(15.1140, 120.6125),
+      northeast: const LatLng(15.1195, 120.6185),
     );
 
     return Stack(
@@ -61,21 +65,29 @@ class MainScreenContent extends StatelessWidget {
         /// Google Map
         GoogleMap(
           initialCameraPosition: const CameraPosition(
-            target: LatLng(15.116888, 120.615710), // Telabastagan
+            target: LatLng(15.116888, 120.615710),
             zoom: 16.0, 
           ),
           myLocationEnabled: true,
           myLocationButtonEnabled: true,
-
-          // Restrict navigation only inside this vicinity
           cameraTargetBounds: CameraTargetBounds(telabastaganBounds),
           minMaxZoomPreference: const MinMaxZoomPreference(16, 20),
         ),
 
+        /// Settings Button
         Positioned(
-          top: h * 0.04,
+          top: safeTop + 16, // 16 pixels below the status bar
           right: w * 0.04,
-          child: const SettingsButton(),
+          child: SettingsButton(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const SettingsButton(),
+                ),
+              );
+            },
+          ),
         ),
 
         /// Request Trike Button (center-bottom)
