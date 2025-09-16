@@ -99,6 +99,7 @@ flutter:
     - assets/icons/edit.svg
     - assets/icons/help.svg
     - assets/icons/place.svg
+    - assets/icons/terminal.png
   fonts:
     - family: Roboto
       fonts:

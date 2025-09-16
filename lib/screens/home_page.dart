@@ -1,3 +1,6 @@
+import 'dart:ui' as ui;
+import 'dart:typed_data';
+import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import '../widgets/navigation_bar.dart';
 import '../widgets/settings_button.dart';
@@ -19,8 +22,8 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final pages = [
-      const MainScreenContent(),     // index 0 → Home
-      const ActivityLogsScreen(),    // index 1 → Activity Logs
+      const MainScreenContent(), // index 0 → Home
+      const ActivityLogsScreen(), // index 1 → Activity Logs
       const AccountSettingsScreen(), // index 2 → Account Settings
     ];
 
@@ -38,8 +41,67 @@ class _HomePageState extends State<HomePage> {
   }
 }
 
-class MainScreenContent extends StatelessWidget {
+class MainScreenContent extends StatefulWidget {
   const MainScreenContent({super.key});
+
+  @override
+  State<MainScreenContent> createState() => _MainScreenContentState();
+}
+
+class _MainScreenContentState extends State<MainScreenContent> {
+  final Set<Marker> _markers = {};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTerminalMarkers();
+  }
+
+  /// Resize and load a custom marker
+  Future<BitmapDescriptor> _getResizedMarker(String path, int targetWidth) async {
+    final ByteData data = await rootBundle.load(path);
+    final ui.Codec codec = await ui.instantiateImageCodec(
+      data.buffer.asUint8List(),
+      targetWidth: targetWidth,
+    );
+    final ui.FrameInfo fi = await codec.getNextFrame();
+    final Uint8List resizedData =
+        (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
+            .buffer
+            .asUint8List();
+    return BitmapDescriptor.fromBytes(resizedData);
+  }
+
+  /// Load multiple terminal markers
+  Future<void> _loadTerminalMarkers() async {
+    final BitmapDescriptor terminalIcon =
+        await _getResizedMarker('assets/icons/terminal.png', 120); // Size of icon
+
+    // Location of 5 terminals
+    final List<LatLng> terminalLocations = [
+      const LatLng(15.116888, 120.615710), 
+      const LatLng(15.117600, 120.614200), 
+      const LatLng(15.118200, 120.617200), 
+      const LatLng(15.115600, 120.613500), 
+      const LatLng(15.115900, 120.616000), 
+    ];
+
+    setState(() {
+      for (int i = 0; i < terminalLocations.length; i++) {
+        _markers.add(
+          Marker(
+            markerId: MarkerId('terminal${i + 1}'),
+            position: terminalLocations[i],
+            icon: terminalIcon,
+            infoWindow: InfoWindow(
+              title: "Tricycle Terminal ${i + 1}",
+              snippet: "Telabastagan",
+            ),
+          ),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -49,10 +111,10 @@ class MainScreenContent extends StatelessWidget {
     final buttonWidth = w * 0.65;
     const buttonHeight = 60.0;
 
-    /// Tight bounds
+    /// Restrict movement inside Telabastagan vicinity
     final LatLngBounds telabastaganBounds = LatLngBounds(
-      southwest: const LatLng(15.1140, 120.6125), // bottom-left
-      northeast: const LatLng(15.1195, 120.6185), // top-right
+      southwest: const LatLng(15.1140, 120.6125),
+      northeast: const LatLng(15.1195, 120.6185),
     );
 
     return Stack(
@@ -61,14 +123,13 @@ class MainScreenContent extends StatelessWidget {
         GoogleMap(
           initialCameraPosition: const CameraPosition(
             target: LatLng(15.116888, 120.615710), // Telabastagan
-            zoom: 16.0, 
+            zoom: 16.0,
           ),
           myLocationEnabled: true,
           myLocationButtonEnabled: true,
-
-          // Restrict navigation only inside this vicinity
           cameraTargetBounds: CameraTargetBounds(telabastaganBounds),
           minMaxZoomPreference: const MinMaxZoomPreference(16, 20),
+          markers: _markers,
         ),
 
         Positioned(
@@ -77,7 +138,7 @@ class MainScreenContent extends StatelessWidget {
           child: const SettingsButton(),
         ),
 
-        /// Request Trike Button (center-bottom)
+        /// Request Trike Button
         Positioned(
           bottom: h * 0.15,
           left: (w - buttonWidth) / 2,
