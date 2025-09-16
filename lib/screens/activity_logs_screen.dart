@@ -11,14 +11,14 @@ class ActivityLogsScreen extends StatelessWidget {
   final Map<String, List<Map<String, String>>> logsByDate = const {
     "Today": [
       {
-        "title": "Go Trike Plus",
+        "title": "Go Trike",
         "price": "₱140.00",
         "subtitle": "4.15pm | 11 min",
         "toda": "Toda #13",
         "pickup": "Terminal 3",
       },
       {
-        "title": "Go Trike Regular",
+        "title": "Go Trike",
         "price": "₱80.00",
         "subtitle": "2.45pm | 8 min",
         "toda": "Toda #7",
@@ -27,7 +27,7 @@ class ActivityLogsScreen extends StatelessWidget {
     ],
     "Yesterday": [
       {
-        "title": "Go Trike Plus",
+        "title": "Go Trike",
         "price": "₱120.00",
         "subtitle": "3.30pm | 10 min",
         "toda": "Toda #5",
@@ -36,14 +36,14 @@ class ActivityLogsScreen extends StatelessWidget {
     ],
     "Past Month": [
       {
-        "title": "Go Trike Regular",
+        "title": "Go Trike",
         "price": "₱90.00",
         "subtitle": "May 5 | 12 min",
         "toda": "Toda #2",
         "pickup": "Terminal 5",
       },
       {
-        "title": "Go Trike Plus",
+        "title": "Go Trike",
         "price": "₱150.00",
         "subtitle": "May 12 | 15 min",
         "toda": "Toda #9",
