@@ -1,17 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart'; // Remove duplicate
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'firebase_options.dart';
 import 'screens/signup_screen.dart';
 import 'screens/forgot_password.dart';
 import 'screens/home_page.dart';
 import 'screens/edit_profile.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
 import 'screens/help.dart';
 import 'screens/signin_screen.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+// Add this line to ensure Firestore is properly initialized
+  FirebaseFirestore.instance.settings = const Settings(
+    persistenceEnabled: true,
+  );
+
   runApp(const GoTrikeApp());
 }
 

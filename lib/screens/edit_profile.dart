@@ -1,5 +1,7 @@
 // lib/screens/edit_profile.dart
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
 
@@ -14,6 +16,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
+  
+  bool _isLoading = false;
+  bool _isDataLoaded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
 
   @override
   void dispose() {
@@ -23,52 +34,127 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     super.dispose();
   }
 
-  void _saveProfile() {
+  Future<void> _loadUserData() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
+
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final data = doc.data();
+      
+      if (data != null && mounted) {
+        setState(() {
+          _nameController.text = data['name'] ?? '';
+          _addressController.text = data['address'] ?? '';
+          _phoneController.text = data['phone'] ?? '';
+          _isDataLoaded = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading profile: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveProfile() async {
     final name = _nameController.text.trim();
     final address = _addressController.text.trim();
     final phone = _phoneController.text.trim();
 
-    debugPrint("Saved profile: $name | $address | $phone");
+    if (name.isEmpty || phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Name and phone number are required')),
+      );
+      return;
+    }
 
+    setState(() => _isLoading = true);
+
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        await FirebaseFirestore.instance.collection('users').doc(uid).update({
+          'name': name,
+          'address': address,
+          'phone': phone,
+        });
+
+        if (mounted) {
+          _showSuccessDialog();
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving profile: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  void _showSuccessDialog() {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          "Profile Saved",
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
           ),
-          title: const Text(
-            "Profile Saved",
-            style: TextStyle(
-              fontWeight: FontWeight.w700,
-              color: Colors.black,
-            ),
+        ),
+        content: const Text(
+          "Your profile changes have been saved successfully!",
+          style: TextStyle(color: Colors.black87),
+        ),
+        actionsPadding: const EdgeInsets.only(
+          bottom: 16,
+          right: 16,
+          left: 16,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          PrimaryButton(
+            text: "OK",
+            onPressed: () {
+              Navigator.pop(context); // close dialog
+              Navigator.pop(context); // return to previous screen
+            },
           ),
-          content: const Text(
-            "Your profile changes have been saved successfully!",
-            style: TextStyle(color: Colors.black87),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTextField(String label, String hint, TextEditingController controller, double w, double h) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: w * 0.035,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
           ),
-          actionsPadding: const EdgeInsets.only(
-            bottom: 16,
-            right: 16,
-            left: 16,
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            PrimaryButton(
-              text: "OK",
-              onPressed: () {
-                Navigator.pop(context); // close dialog
-                Navigator.pop(context, {
-                  "name": name,
-                  "address": address,
-                  "phone": phone,
-                });
-              },
-            ),
-          ],
-        );
-      },
+        ),
+        SizedBox(height: h * 0.01),
+        CustomTextField(
+          hintText: hint,
+          controller: controller,
+        ),
+        SizedBox(height: h * 0.03),
+      ],
     );
   }
 
@@ -76,6 +162,26 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
     final h = MediaQuery.of(context).size.height;
+
+    if (!_isDataLoaded) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          title: const Text(
+            'Edit Profile',
+            style: TextStyle(
+              color: Colors.black,
+              fontFamily: 'Roboto',
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          iconTheme: const IconThemeData(color: Colors.black),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -98,7 +204,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Big Header inside body
+              // Header
               Text(
                 'Edit Profile',
                 style: TextStyle(
@@ -110,7 +216,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
               SizedBox(height: h * 0.02),
 
-              // App logo style text
+              // App logo
               Text.rich(
                 TextSpan(
                   children: [
@@ -139,56 +245,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
               SizedBox(height: h * 0.04),
 
-              // Name
-              Text(
-                'Name',
-                style: TextStyle(
-                  fontSize: w * 0.035,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
-              ),
-              SizedBox(height: h * 0.01),
-              CustomTextField(
-                hintText: 'Enter your name',
-                controller: _nameController,
-              ),
+              // Form fields
+              _buildTextField('Name', 'Enter your name', _nameController, w, h),
+              _buildTextField('Address', 'Enter your address', _addressController, w, h),
+              _buildTextField('Phone Number', 'Enter your phone number', _phoneController, w, h),
+
               SizedBox(height: h * 0.03),
 
-              // Address
-              Text(
-                'Address',
-                style: TextStyle(
-                  fontSize: w * 0.035,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
-              ),
-              SizedBox(height: h * 0.01),
-              CustomTextField(
-                hintText: 'Enter your address',
-                controller: _addressController,
-              ),
-              SizedBox(height: h * 0.03),
-
-              // Phone
-              Text(
-                'Phone Number',
-                style: TextStyle(
-                  fontSize: w * 0.035,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
-              ),
-              SizedBox(height: h * 0.01),
-              CustomTextField(
-                hintText: 'Enter your phone number',
-                controller: _phoneController,
-              ),
-
-              SizedBox(height: h * 0.06),
-
-              // Save Changes Button
+              // Save Button
               SizedBox(
                 width: double.infinity,
                 height: h * 0.065,
@@ -199,16 +263,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  onPressed: _saveProfile,
-                  child: Text(
-                    'Save Changes',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: w * 0.045,
-                      fontFamily: 'Roboto',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  onPressed: _isLoading ? null : _saveProfile,
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                          'Save Changes',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: w * 0.045,
+                            fontFamily: 'Roboto',
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                 ),
               ),
             ],

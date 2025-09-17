@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
-import '../services/auth_service.dart'; // Adjust path as needed
 import '../widgets/signup_email_verify.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -85,7 +85,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return null;
   }
 
-  // Firebase authentication
+  // Test Firestore connection
+  Future<void> _testFirestore() async {
+    try {
+      print('🔥 Testing Firestore connection...');
+      await FirebaseFirestore.instance.collection('test').doc('test').set({
+        'message': 'Hello Firestore',
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+      print('✅ Firestore test successful!');
+    } catch (e) {
+      print('❌ Firestore test failed: $e');
+    }
+  }
+
+  // Simplified Firebase authentication
   Future<Map<String, dynamic>> _authenticateUser({
     required String name,
     required String phone,
@@ -93,30 +107,83 @@ class _SignUpScreenState extends State<SignUpScreen> {
     required String password,
   }) async {
     try {
-      User? user = await authService.value.signUp(email, password);
+      debugPrint('Starting authentication for: $email');
+      
+      // Create user account
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+      
+      User? user = userCredential.user;
+      debugPrint('User created: ${user?.uid}');
       
       if (user != null) {
-        // Update user profile with additional info
-        await user.updateDisplayName(name);
-        
-        // Sign out immediately after account creation
-        // This prevents automatic navigation to home screen
-        await authService.value.signOut();
-        
-        // You might want to store additional user data (name, phone) in Firestore here
-        // Example:
-        // await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        //   'name': name,
-        //   'phone': phone,
-        //   'email': email,
-        //   'createdAt': FieldValue.serverTimestamp(),
-        // });
-
-        return {
-          'success': true,
-          'message': 'Account created successfully!',
-          'user': user,
-        };
+        try {
+          // Update display name in Firebase Auth
+          await user.updateDisplayName(name);
+          print('Display name updated');
+          
+          // Store user data in Firestore with timeout and retry logic
+          try {
+            print('Attempting to store user data in Firestore for UID: ${user.uid}');
+            
+            final userData = {
+              'name': name,
+              'phone': phone,
+              'email': email,
+              'createdAt': FieldValue.serverTimestamp(),
+            };
+            
+            print('User data to store: $userData');
+            
+            // Add timeout to prevent hanging
+            await FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .set(userData)
+                .timeout(
+                  const Duration(seconds: 10),
+                  onTimeout: () {
+                    throw Exception('Firestore write timeout after 10 seconds');
+                  },
+                );
+            
+            print('✅ User data successfully stored in Firestore');
+          } catch (firestoreError) {
+            print('❌ Firestore error: $firestoreError');
+            
+            // Try a simpler write without serverTimestamp
+            try {
+              print('Retrying with simpler data...');
+              await FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(user.uid)
+                  .set({
+                    'name': name,
+                    'phone': phone,
+                    'email': email,
+                  })
+                  .timeout(const Duration(seconds: 5));
+              print('✅ Retry successful - user data stored');
+            } catch (retryError) {
+              print('❌ Retry also failed: $retryError');
+              // Continue anyway - at least the account exists
+            }
+          }
+          
+          return {
+            'success': true,
+            'message': 'Account created successfully!',
+            'user': user,
+          };
+        } catch (profileError) {
+          debugPrint('Profile update error: $profileError');
+          // Even if profile update fails, the account was created
+          return {
+            'success': true,
+            'message': 'Account created successfully!',
+            'user': user,
+          };
+        }
       } else {
         return {
           'success': false,
@@ -124,8 +191,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
         };
       }
     } on FirebaseAuthException catch (e) {
-      String errorMessage;
+      debugPrint('Firebase Auth Exception: ${e.code} - ${e.message}');
       
+      String errorMessage;
       switch (e.code) {
         case 'weak-password':
           errorMessage = 'The password is too weak.';
@@ -151,6 +219,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'message': errorMessage,
       };
     } catch (e) {
+      debugPrint('General error: $e');
       return {
         'success': false,
         'message': 'An unexpected error occurred. Please try again.',
@@ -160,45 +229,67 @@ class _SignUpScreenState extends State<SignUpScreen> {
 
   // Handle sign up with manual validation
   Future<void> _handleSignUp() async {
+    debugPrint('Sign up button clicked');
+    
+    // Prevent multiple taps
+    if (_isLoading) {
+      debugPrint('Already loading, ignoring tap');
+      return;
+    }
+
     // Clear previous error
     setState(() {
       _errorMessage = null;
-    });
-
-    // Manual validation since Form validation isn't available
-    String? nameError = _validateField(nameController.text, 'Name');
-    String? phoneError = _validateField(phoneController.text, 'Phone Number');
-    String? emailError = _validateField(emailController.text, 'Email');
-    String? passwordError = _validateField(passwordController.text, 'Password');
-    String? confirmError = _validateField(confirmController.text, 'Confirm Password');
-
-    // Check for validation errors
-    if (nameError != null) {
-      setState(() => _errorMessage = nameError);
-      return;
-    }
-    if (phoneError != null) {
-      setState(() => _errorMessage = phoneError);
-      return;
-    }
-    if (emailError != null) {
-      setState(() => _errorMessage = emailError);
-      return;
-    }
-    if (passwordError != null) {
-      setState(() => _errorMessage = passwordError);
-      return;
-    }
-    if (confirmError != null) {
-      setState(() => _errorMessage = confirmError);
-      return;
-    }
-
-    setState(() {
       _isLoading = true;
     });
 
     try {
+      // Manual validation
+      String? nameError = _validateField(nameController.text, 'Name');
+      String? phoneError = _validateField(phoneController.text, 'Phone Number');
+      String? emailError = _validateField(emailController.text, 'Email');
+      String? passwordError = _validateField(passwordController.text, 'Password');
+      String? confirmError = _validateField(confirmController.text, 'Confirm Password');
+
+      // Check for validation errors
+      if (nameError != null) {
+        setState(() {
+          _errorMessage = nameError;
+          _isLoading = false;
+        });
+        return;
+      }
+      if (phoneError != null) {
+        setState(() {
+          _errorMessage = phoneError;
+          _isLoading = false;
+        });
+        return;
+      }
+      if (emailError != null) {
+        setState(() {
+          _errorMessage = emailError;
+          _isLoading = false;
+        });
+        return;
+      }
+      if (passwordError != null) {
+        setState(() {
+          _errorMessage = passwordError;
+          _isLoading = false;
+        });
+        return;
+      }
+      if (confirmError != null) {
+        setState(() {
+          _errorMessage = confirmError;
+          _isLoading = false;
+        });
+        return;
+      }
+
+      debugPrint('Validation passed, authenticating user');
+
       final result = await _authenticateUser(
         name: nameController.text.trim(),
         phone: phoneController.text.trim(),
@@ -206,42 +297,38 @@ class _SignUpScreenState extends State<SignUpScreen> {
         password: passwordController.text,
       );
 
-    if (result['success']) {
-      // Sign out the user first to prevent auto-navigation
-      try {
-        await authService.value.signOut();
-      } catch (e) {
-        // Ignore sign out errors for now
-      }
+      debugPrint('Authentication result: ${result['success']}');
 
-      if (mounted) {
-        // Clear form fields
-        nameController.clear();
-        phoneController.clear();
-        emailController.clear();
-        passwordController.clear();
-        confirmController.clear();
-
-        // Show modal email verify
-        showDialog(
-          context: context,
-          barrierDismissible: false, // user must interact with buttons
-          builder: (context) => const Dialog(
-            backgroundColor: Colors.transparent,
-            insetPadding: EdgeInsets.all(16),
-            child: SignupEmailVerify(),
-          ),
-        );
-      }
-    } else {
-        setState(() {
-          _errorMessage = result['message'];
-        });
+      if (result['success']) {
+        if (mounted) {
+          debugPrint('Account created successfully, navigating back to sign in');
+          
+          // Show success message
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Account created successfully! Please sign in.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          // Navigate back to sign-in screen
+          Navigator.pop(context);
+        }
+      } else {
+        debugPrint('Authentication failed: ${result['message']}');
+        if (mounted) {
+          setState(() {
+            _errorMessage = result['message'];
+          });
+        }
       }
     } catch (e) {
-      setState(() {
-        _errorMessage = 'An error occurred. Please try again.';
-      });
+      debugPrint('Error in _handleSignUp: $e');
+      if (mounted) {
+        setState(() {
+          _errorMessage = 'An error occurred. Please try again.';
+        });
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -356,12 +443,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 // Sign Up button
                 PrimaryButton(
                   text: _isLoading ? "Creating Account..." : "Sign Up",
-                  onPressed: () {
-                    if (!_isLoading) {
-                      _handleSignUp();
-                    }
-                  },
+                  onPressed: _isLoading ? null : _handleSignUp,
                 ),
+                
+                if (_isLoading)
+                  const Padding(
+                    padding: EdgeInsets.only(top: 16),
+                    child: CircularProgressIndicator(),
+                  ),
+
                 const SizedBox(height: 20),
 
                 // Sign In link
