@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../screen - terminal/home_terminal.dart';
+import 'home_terminal.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/custom_text_field.dart'; //import your CustomTextField
 

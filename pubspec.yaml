@@ -32,7 +32,7 @@ dependencies:
     sdk: flutter
   flutter_svg: ^2.0.9
   google_maps_flutter: ^2.6.1  
-
+  intl: ^0.19.0
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
@@ -100,6 +100,7 @@ flutter:
     - assets/icons/help.svg
     - assets/icons/place.svg
     - assets/icons/terminal.png
+    - assets/icons/fullscreen.svg
     - assets/icons/person_search.svg
   fonts:
     - family: Roboto

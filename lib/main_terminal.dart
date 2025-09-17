@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import '../screen - terminal/signin_screen_terminal.dart';
-import '../screen - terminal/home_terminal.dart';
+import 'screens - terminal/signin_screen_terminal.dart';
+import 'screens - terminal/home_terminal.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
