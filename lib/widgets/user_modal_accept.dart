@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../screens/home_page.dart'; // Import your HomePage screen
 
 class UserAcceptState extends StatefulWidget {
   const UserAcceptState({super.key});
@@ -8,7 +9,22 @@ class UserAcceptState extends StatefulWidget {
 }
 
 class _UserAcceptStateState extends State<UserAcceptState> {
-  bool driverFound = false; // Example state variable
+  bool driverFound = false;
+
+  void _onDriverFound() {
+    setState(() {
+      driverFound = true;
+    });
+
+    // Delay a little to show the updated button text
+    Future.delayed(const Duration(milliseconds: 300), () {
+      // Navigate back to home page
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +46,7 @@ class _UserAcceptStateState extends State<UserAcceptState> {
                 width: 80,
                 height: 75,
                 child: Image.asset(
-                  'assets/images/trike.png', // Correct way to reference local asset
+                  'assets/images/trike.png',
                   fit: BoxFit.cover,
                 ),
               ),
@@ -41,7 +57,7 @@ class _UserAcceptStateState extends State<UserAcceptState> {
               top: 146,
               child: Text(
                 'Driver is in your way!',
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.black,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
@@ -54,7 +70,7 @@ class _UserAcceptStateState extends State<UserAcceptState> {
               top: 180,
               child: Text(
                 'Please wait your driver...',
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.black,
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -66,11 +82,7 @@ class _UserAcceptStateState extends State<UserAcceptState> {
             Positioned(
               top: 224,
               child: GestureDetector(
-                onTap: () {
-                  setState(() {
-                    driverFound = true; // Example action
-                  });
-                },
+                onTap: _onDriverFound,
                 child: Container(
                   width: 114,
                   height: 60,
@@ -83,7 +95,7 @@ class _UserAcceptStateState extends State<UserAcceptState> {
                   child: Text(
                     driverFound ? 'Driver Found!' : 'I found the Driver!',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
                       fontWeight: FontWeight.w400,
