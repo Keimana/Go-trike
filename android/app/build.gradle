@@ -28,7 +28,7 @@ if (flutterVersionName == null) {
 android {
     namespace "com.example.demo_app"
     compileSdk flutter.compileSdkVersion
-    ndkVersion flutter.ndkVersion
+    ndkVersion rootProject.ext.has("ndkVersion") ? rootProject.ext.ndkVersion : "25.1.8937393"
 
     compileOptions {
         // ✅ Force Java 11 for Firebase & Google Maps
@@ -48,7 +48,7 @@ android {
         applicationId "com.example.demo_app"
 
         // ✅ Firebase Auth now requires minSdk 23
-        minSdkVersion flutter.minSdkVersion
+        minSdkVersion 23
 
         // ✅ Match Flutter's recommended target
         targetSdkVersion flutter.targetSdkVersion
