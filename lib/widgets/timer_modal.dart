@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'user_modal_accept.dart'; // Import your user_modal_accept file
 
 class TimerModal extends StatefulWidget {
   const TimerModal({super.key});
@@ -26,13 +27,31 @@ class _TimerModalState extends State<TimerModal>
     _scaleAnimation =
         CurvedAnimation(parent: _controller, curve: Curves.elasticOut);
 
-    // Show Cancel button after 5 seconds
+    // Show Cancel button and then open UserAcceptState after 5 seconds
     Future.delayed(const Duration(seconds: 5), () {
       if (mounted) {
         setState(() {
           showCancel = true;
         });
         _controller.forward(); // Trigger animation
+
+        // Open UserAcceptState after a short delay for animation
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (mounted) {
+            // Optional: close this TimerModal first
+            Navigator.of(context).pop();
+
+            // Then show UserAcceptState dialog
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => const Dialog(
+                backgroundColor: Colors.transparent,
+                child: UserAcceptState(),
+              ),
+            );
+          }
+        });
       }
     });
   }
@@ -56,15 +75,12 @@ class _TimerModalState extends State<TimerModal>
           mainAxisSize: MainAxisSize.min,
           children: [
             const SizedBox(height: 20),
-
-            // Replace timer icon with asset image
             Image.asset(
               "assets/images/trike.png",
               width: 80,
               height: 80,
               fit: BoxFit.contain,
             ),
-
             const SizedBox(height: 20),
             const Text(
               "Waiting for Driver...",
@@ -74,10 +90,7 @@ class _TimerModalState extends State<TimerModal>
               ),
               textAlign: TextAlign.center,
             ),
-
             const Spacer(),
-
-            // Animated Cancel button after 5s
             if (showCancel)
               ScaleTransition(
                 scale: _scaleAnimation,
