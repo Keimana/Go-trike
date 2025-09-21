@@ -46,7 +46,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         setState(() {
           _nameController.text = data['name'] ?? '';
           _addressController.text = data['address'] ?? '';
-          _phoneController.text = data['phone'] ?? '';
+          
+          // Remove +63 prefix when loading data to show only the mobile number part
+          String phone = data['phone'] ?? '';
+          if (phone.startsWith('+63')) {
+            _phoneController.text = phone.substring(3);
+          } else {
+            _phoneController.text = phone;
+          }
+          
           _isDataLoaded = true;
         });
       }
@@ -59,14 +67,76 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
+  bool _isValidPhilippinePhoneNumber(String phone) {
+    // Remove all spaces and non-digit characters except +
+    String cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    // Check if it starts with +63
+    if (!cleanPhone.startsWith('+63')) {
+      return false;
+    }
+  
+    // Remove +63 to check the remaining digits
+    String remainingDigits = cleanPhone.substring(3);
+    
+    return remainingDigits.length == 10 && 
+           remainingDigits.startsWith('9') && 
+           RegExp(r'^\d{10}$').hasMatch(remainingDigits);
+  }
+
+  String _getPhoneErrorMessage(String phone) {
+    if (phone.isEmpty) {
+      return 'Phone number is required';
+    }
+    
+    String cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    if (!cleanPhone.startsWith('+63')) {
+      return 'Phone number must start with +63';
+    }
+    
+    String remainingDigits = cleanPhone.substring(3);
+    
+    if (remainingDigits.length < 10) {
+      return 'Phone number is too short';
+    } else if (remainingDigits.length > 10) {
+      return 'Phone number is too long';
+    } else if (!remainingDigits.startsWith('9')) {
+      return 'Mobile number must start with +639';
+    }
+    
+    return 'Invalid Philippine mobile number format';
+  }
+
   Future<void> _saveProfile() async {
     final name = _nameController.text.trim();
     final address = _addressController.text.trim();
     final phone = _phoneController.text.trim();
 
-    if (name.isEmpty || phone.isEmpty) {
+    // Validate required fields
+    if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name and phone number are required')),
+        const SnackBar(content: Text('Name is required')),
+      );
+      return;
+    }
+
+    if (phone.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Phone number is required')),
+      );
+      return;
+    }
+
+    // Construct full phone number with +63 prefix
+    String fullPhone = '+63$phone';
+
+    // Validate Philippine mobile number format
+    if (!_isValidPhilippinePhoneNumber(fullPhone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_getPhoneErrorMessage(fullPhone)),
+          duration: const Duration(seconds: 4),
+        ),
       );
       return;
     }
@@ -79,7 +149,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         await FirebaseFirestore.instance.collection('users').doc(uid).update({
           'name': name,
           'address': address,
-          'phone': phone,
+          'phone': fullPhone, // Save with +63 prefix
         });
 
         if (mounted) {
@@ -152,6 +222,94 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         CustomTextField(
           hintText: hint,
           controller: controller,
+        ),
+        SizedBox(height: h * 0.03),
+      ],
+    );
+  }
+
+  Widget _buildPhoneField(String label, TextEditingController controller, double w, double h) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: w * 0.035,
+            fontWeight: FontWeight.w500,
+            color: Colors.black,
+          ),
+        ),
+        SizedBox(height: h * 0.01),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.grey[300]!),
+          ),
+          child: Row(
+            children: [
+              // Prefix container with flag and +63
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    bottomLeft: Radius.circular(8),
+                  ),
+                  border: Border(
+                    right: BorderSide(color: Colors.grey[300]!),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      '🇵🇭',
+                      style: TextStyle(fontSize: w * 0.04),
+                    ),
+                    SizedBox(width: w * 0.01),
+                    Text(
+                      '+63',
+                      style: TextStyle(
+                        fontSize: w * 0.04,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Text input field
+              Expanded(
+                child: TextFormField(
+                  controller: controller,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    hintText: '9123456789',
+                    hintStyle: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: w * 0.04,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                  ),
+                  style: TextStyle(
+                    fontSize: w * 0.04,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: h * 0.005),
+        Text(
+          'Enter 10-digit mobile number starting with 9',
+          style: TextStyle(
+            fontSize: w * 0.03,
+            color: Colors.grey[600],
+            fontStyle: FontStyle.italic,
+          ),
         ),
         SizedBox(height: h * 0.03),
       ],
@@ -248,7 +406,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               // Form fields
               _buildTextField('Name', 'Enter your name', _nameController, w, h),
               _buildTextField('Address', 'Enter your address', _addressController, w, h),
-              _buildTextField('Phone Number', 'Enter your phone number', _phoneController, w, h),
+              _buildPhoneField('Phone Number', _phoneController, w, h),
 
               SizedBox(height: h * 0.03),
 
