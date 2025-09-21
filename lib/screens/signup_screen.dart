@@ -102,14 +102,64 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return null;
   }
 
-  /// Validate phone field
+  /// Philippine mobile phone number validation
+  bool _isValidPhilippinePhoneNumber(String phone) {
+    // Remove all spaces and non-digit characters except +
+    String cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    // Check if it starts with +63
+    if (!cleanPhone.startsWith('+63')) {
+      return false;
+    }
+    
+    // Remove +63 to check the remaining digits
+    String remainingDigits = cleanPhone.substring(3);
+    
+    // Philippine mobile numbers: +639XXXXXXXXX (total 13 characters)
+    // Should be exactly 10 digits and start with 9
+    return remainingDigits.length == 10 && 
+           remainingDigits.startsWith('9') && 
+           RegExp(r'^\d{10}$').hasMatch(remainingDigits);
+  }
+
+  /// Get specific error message for Philippine phone validation
+  String _getPhoneErrorMessage(String phone) {
+    if (phone.isEmpty) {
+      return 'Phone number is required';
+    }
+    
+    String cleanPhone = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    
+    if (!cleanPhone.startsWith('+63')) {
+      return 'Phone number must start with +63';
+    }
+    
+    String remainingDigits = cleanPhone.substring(3);
+    
+    if (remainingDigits.length < 10) {
+      return 'Phone number is too short';
+    } else if (remainingDigits.length > 10) {
+      return 'Phone number is too long';
+    } else if (!remainingDigits.startsWith('9')) {
+      return 'Mobile number must start with +639';
+    }
+    
+    return 'Invalid Philippine mobile number format';
+  }
+
+  /// Validate phone field with Philippine format
   String? _validatePhone(String? value) {
     if (value == null || value.trim().isEmpty) {
       return 'Phone number is required';
     }
-    if (!RegExp(r'^\+?[\d\s\-\(\)]{10,}$').hasMatch(value)) {
-      return 'Please enter a valid phone number';
+    
+    // Construct full phone number with +63 prefix
+    String fullPhone = '+63${value.trim()}';
+    
+    if (!_isValidPhilippinePhoneNumber(fullPhone)) {
+      return _getPhoneErrorMessage(fullPhone);
     }
+    
     return null;
   }
 
@@ -204,7 +254,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     return {
       'uid': uid,
       'name': name,
-      'phone': phone,
+      'phone': phone, // This will already have +63 prefix
       'email': email,
       'createdAt': FieldValue.serverTimestamp(),
     };
@@ -291,7 +341,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
   Future<AuthResult> _registerUser() async {
     try {
       final name = _nameController.text.trim();
-      final phone = _phoneController.text.trim();
+      final phone = '+63${_phoneController.text.trim()}'; // Add +63 prefix
       final email = _emailController.text.trim();
       final password = _passwordController.text;
 
@@ -421,6 +471,71 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
+  /// Build custom phone field with Philippine flag and +63 prefix
+  Widget _buildPhoneField() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          // Prefix container with flag and +63
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(8),
+                bottomLeft: Radius.circular(8),
+              ),
+              border: Border(
+                right: BorderSide(color: Colors.grey[300]!),
+              ),
+            ),
+            child: Row(
+              children: [
+                const Text(
+                  '🇵🇭',
+                  style: TextStyle(fontSize: 16),
+                ),
+                const SizedBox(width: 4),
+                const Text(
+                  '+63',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Text input field
+          Expanded(
+            child: TextFormField(
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(
+                hintText: '9123456789',
+                hintStyle: TextStyle(
+                  color: Colors.grey,
+                  fontSize: 16,
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              ),
+              style: const TextStyle(
+                fontSize: 16,
+                color: Colors.black,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -524,9 +639,19 @@ class _SignUpScreenState extends State<SignUpScreen> {
           controller: _nameController,
         ),
         const SizedBox(height: 12),
-        CustomTextField(
-          hintText: "Phone Number",
-          controller: _phoneController,
+        // Custom phone field with Philippine flag and +63 prefix
+        _buildPhoneField(),
+        const SizedBox(height: 4),
+        const Align(
+          alignment: Alignment.centerLeft,
+          child: Text(
+            'Enter 10-digit mobile number starting with 9',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
         ),
         const SizedBox(height: 12),
         CustomTextField(
