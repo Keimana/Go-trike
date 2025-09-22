@@ -4,7 +4,12 @@ import '../widgets/primary_button.dart';
 import '../widgets/terminal_request_trike_modal.dart';
 
 class TerminalHome extends StatelessWidget {
-  const TerminalHome({super.key});
+  final String terminalName; // 👈 dynamic terminal name
+
+  const TerminalHome({
+    super.key,
+    this.terminalName = 'Terminal 1', // 👈 default value (Fix 1)
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -22,10 +27,10 @@ class TerminalHome extends StatelessWidget {
                 color: const Color(0xFFF8FAFB),
                 borderRadius: BorderRadius.circular(30),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
-                  'Terminal 1',
-                  style: TextStyle(
+                  terminalName, // 👈 shows correct terminal
+                  style: const TextStyle(
                     color: Color(0xFF323232),
                     fontSize: 20,
                     fontFamily: 'Roboto',
