@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'home_terminal.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/primary_button.dart';
-import '../widgets/custom_text_field.dart'; //import your CustomTextField
+import '../widgets/custom_text_field.dart';
 
 class SignInScreenTerminal extends StatefulWidget {
   const SignInScreenTerminal({super.key});
@@ -14,13 +15,57 @@ class _SignInScreenTerminalState extends State<SignInScreenTerminal> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
+  bool _isLoading = false;
+
+  Future<void> _loginTerminal() async {
+    setState(() => _isLoading = true);
+
+    try {
+      // 🔹 1. Sign in with FirebaseAuth
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(
+        email: emailController.text.trim(),
+        password: passwordController.text.trim(),
+      );
+
+      String uid = userCredential.user!.uid;
+
+      // 🔹 2. Fetch terminal data from Firestore
+      DocumentSnapshot terminalDoc =
+          await FirebaseFirestore.instance.collection('terminals').doc(uid).get();
+
+      if (!terminalDoc.exists) {
+        throw Exception("Terminal data not found in Firestore");
+      }
+
+      String terminalName = terminalDoc['terminalName'];
+
+      // 🔹 3. Navigate to Home with terminalName
+      Navigator.pushReplacementNamed(
+        context,
+        '/home',
+        arguments: terminalName,
+      );
+    } on FirebaseAuthException catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? "Login failed")),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
     final isTablet = size.width > 600;
 
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+      backgroundColor: Colors.white,
       body: Center(
         child: SingleChildScrollView(
           child: ConstrainedBox(
@@ -30,7 +75,7 @@ class _SignInScreenTerminalState extends State<SignInScreenTerminal> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                //Logo
+                // Logo
                 SizedBox(
                   height: size.height * 0.25,
                   child: Image.asset(
@@ -41,36 +86,7 @@ class _SignInScreenTerminalState extends State<SignInScreenTerminal> {
 
                 const SizedBox(height: 20),
 
-                //App Name
-                const Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: 'Go',
-                        style: TextStyle(
-                          color: Color(0xFF0097B2),
-                          fontSize: 32,
-                          fontFamily: 'Roboto',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      TextSpan(text: ' '),
-                      TextSpan(
-                        text: 'Trike',
-                        style: TextStyle(
-                          color: Color(0xFFFF9500),
-                          fontSize: 32,
-                          fontFamily: 'Roboto',
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                //Title
+                // Title
                 const Text(
                   'Representative Login',
                   style: TextStyle(
@@ -83,7 +99,7 @@ class _SignInScreenTerminalState extends State<SignInScreenTerminal> {
 
                 const SizedBox(height: 30),
 
-                //Email Field
+                // Email Field
                 CustomTextField(
                   hintText: "Email",
                   controller: emailController,
@@ -91,7 +107,7 @@ class _SignInScreenTerminalState extends State<SignInScreenTerminal> {
 
                 const SizedBox(height: 20),
 
-                //Password Field
+                // Password Field
                 CustomTextField(
                   hintText: "Password",
                   controller: passwordController,
@@ -100,21 +116,13 @@ class _SignInScreenTerminalState extends State<SignInScreenTerminal> {
 
                 const SizedBox(height: 30),
 
-                //Login Button
+                // Login Button
                 SizedBox(
                   width: double.infinity,
                   height: 55,
                   child: PrimaryButton(
-                    text: "Login",
-                    onPressed: () {
-                      // For now, just navigate to TerminalHome
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const TerminalHome(),
-                        ),
-                      );
-                    },
+                    text: _isLoading ? "Logging in..." : "Login",
+                    onPressed: _isLoading ? null : _loginTerminal,
                   ),
                 ),
               ],

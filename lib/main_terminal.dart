@@ -22,9 +22,19 @@ class TerminalApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'Roboto'),
       initialRoute: '/',
-      routes: {
-        '/': (context) => const SignInScreenTerminal(),
-        '/home': (context) => const TerminalHome(),
+      onGenerateRoute: (settings) {
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(
+              builder: (_) => const SignInScreenTerminal(),
+            );
+          case '/home':
+            final terminalName = settings.arguments as String? ?? 'Terminal 1';
+            return MaterialPageRoute(
+              builder: (_) => TerminalHome(terminalName: terminalName),
+            );
+        }
+        return null;
       },
     );
   }
