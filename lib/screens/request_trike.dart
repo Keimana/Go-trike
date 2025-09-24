@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // ✅ added
 import '../services/ride_request_service.dart';
 
 class RequestTrikePage extends StatefulWidget {
@@ -21,6 +22,29 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
   final TextEditingController _fareController = TextEditingController();
   String _selectedPaymentMethod = 'Cash';
   bool _isSubmitting = false;
+  String _userName = "User"; // ✅ store Firestore name here
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final snapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    if (snapshot.exists && snapshot.data()!.containsKey('name')) {
+      setState(() {
+        _userName = snapshot['name'];
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -55,32 +79,26 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
     });
 
     try {
-      // Get current user
-      final User? currentUser = FirebaseAuth.instance.currentUser;
-      final String userName = currentUser?.displayName ?? 'Unknown User';
-
       print('Submitting ride request...');
+      print('User Name: $_userName');
       print('User Location: ${widget.userLocation}');
       print('User Address: ${widget.userAddress}');
       print('Fare Amount: $fareAmount');
       print('Payment Method: $_selectedPaymentMethod');
 
-      // Submit ride request
       final RideRequest? rideRequest = await RideRequestService.submitRideRequest(
         userLocation: widget.userLocation,
-        userName: userName,
+        userName: _userName, // ✅ Firestore name
         userAddress: widget.userAddress,
         fareAmount: fareAmount,
         paymentMethod: _selectedPaymentMethod,
       );
 
       if (rideRequest != null) {
-        // Success - show confirmation dialog
         if (mounted) {
           _showSuccessDialog(rideRequest);
         }
       } else {
-        // Failed to submit
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -142,8 +160,8 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                Navigator.of(context).pop(rideRequest); // Return to home with result
+                Navigator.of(context).pop();
+                Navigator.of(context).pop(rideRequest);
               },
               child: const Text('OK'),
             ),
@@ -155,9 +173,6 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
 
   @override
   Widget build(BuildContext context) {
-    final User? currentUser = FirebaseAuth.instance.currentUser;
-    final String userName = currentUser?.displayName ?? 'User';
-
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -165,14 +180,11 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
         color: Colors.white,
         child: Stack(
           children: [
-            // Background overlay
             Container(
               width: double.infinity,
               height: double.infinity,
               color: const Color(0xB2323232),
             ),
-
-            // Main content card
             Positioned(
               left: 0,
               right: 0,
@@ -198,9 +210,8 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Welcome text
                       Text(
-                        'Welcome Back $userName!',
+                        'Welcome Back $_userName!', // ✅ Firestore name
                         style: const TextStyle(
                           color: Colors.black,
                           fontSize: 24,
@@ -208,8 +219,6 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // Address
                       Text(
                         widget.userAddress,
                         style: const TextStyle(
@@ -219,8 +228,6 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         ),
                       ),
                       const SizedBox(height: 32),
-
-                      // Fare Amount Section
                       const Text(
                         'How much will you pay?',
                         style: TextStyle(
@@ -230,8 +237,6 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // Fare input field
                       Container(
                         width: double.infinity,
                         height: 60,
@@ -263,8 +268,6 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         ),
                       ),
                       const SizedBox(height: 32),
-
-                      // Payment Method Section
                       const Text(
                         'Payment Method',
                         style: TextStyle(
@@ -274,8 +277,6 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         ),
                       ),
                       const SizedBox(height: 16),
-
-                      // Payment method buttons
                       Row(
                         children: [
                           GestureDetector(
@@ -340,11 +341,8 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         ],
                       ),
                       const SizedBox(height: 32),
-
-                      // Action Buttons
                       Row(
                         children: [
-                          // Request Button
                           Expanded(
                             child: GestureDetector(
                               onTap: _isSubmitting ? null : _submitRideRequest,
@@ -379,8 +377,6 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                             ),
                           ),
                           const SizedBox(width: 16),
-
-                          // Cancel Button
                           Expanded(
                             child: GestureDetector(
                               onTap: _isSubmitting
@@ -418,8 +414,6 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                 ),
               ),
             ),
-
-            // App title at the top
             const Positioned(
               left: 31,
               top: 46,

@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // ✅ added
 
 /// Profile card builder (name + phone + avatar)
 class ProfileCardBuilder extends StatelessWidget {
   final double cardWidth;
   final double profileCardHeight;
-  final String name;
+  final String? name; // ✅ made optional
   final String phone;
 
   const ProfileCardBuilder({
     super.key,
     required this.cardWidth,
     required this.profileCardHeight,
-    required this.name,
+    this.name, // ✅ optional now
     required this.phone,
   });
 
@@ -20,6 +21,10 @@ class ProfileCardBuilder extends StatelessWidget {
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
     final h = MediaQuery.of(context).size.height;
+
+    // ✅ Always fetch latest Firebase user displayName if name is not provided
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    final String displayName = name ?? currentUser?.displayName ?? 'User';
 
     return Container(
       width: cardWidth,
@@ -63,7 +68,7 @@ class ProfileCardBuilder extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
+                  displayName, // ✅ synced with FirebaseAuth
                   style: TextStyle(
                     fontSize: w * 0.045,
                     fontWeight: FontWeight.bold,
