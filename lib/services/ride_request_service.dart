@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'distance_matrix_service.dart';
 
@@ -14,6 +15,12 @@ class RideRequestService {
     required String paymentMethod,
   }) async {
     try {
+      // Get current user
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        throw Exception('User not authenticated');
+      }
+
       // Step 1: Find nearest terminal using Distance Matrix API
       print('Finding nearest terminal...');
       final TerminalAssignment? assignment = await DistanceMatrixService.findNearestTerminal(userLocation);
@@ -28,8 +35,8 @@ class RideRequestService {
       // Step 2: Create ride request object
       final RideRequest rideRequest = RideRequest(
         id: '', // Will be set by Firestore
-        userId: 'user_${DateTime.now().millisecondsSinceEpoch}', // Temporary user ID
-        userName: userName,
+        userId: currentUser.uid,
+        userName: userName.isNotEmpty ? userName : (currentUser.displayName ?? 'User'),
         userLocation: userLocation,
         userAddress: userAddress,
         assignedTerminal: assignment.terminal,
@@ -59,6 +66,14 @@ class RideRequestService {
           .doc(docRef.id)
           .set(finalRideRequest.toJson());
 
+      // Step 5: Save to user's personal rides collection
+      await _firestore
+          .collection('users')
+          .doc(currentUser.uid)
+          .collection('rides')
+          .doc(docRef.id)
+          .set(finalRideRequest.toJson());
+
       print('Ride request saved successfully with ID: ${docRef.id}');
       return finalRideRequest;
 
@@ -75,10 +90,34 @@ class RideRequestService {
         .doc(rideId)
         .snapshots()
         .map((snapshot) {
-      if (snapshot.exists) {
+      if (snapshot.exists && snapshot.data() != null) {
         return RideRequest.fromJson(snapshot.data()!);
       }
       return null;
+    });
+  }
+
+  /// Get current user's rides
+  static Stream<List<RideRequest>> listenToUserRides({String? userId}) {
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    final String uid = userId ?? currentUser?.uid ?? '';
+    
+    if (uid.isEmpty) {
+      return Stream.value([]);
+    }
+
+    return _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('rides')
+        .orderBy('requestTime', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return RideRequest.fromJson(data);
+      }).toList();
     });
   }
 
@@ -101,31 +140,101 @@ class RideRequestService {
   }
 
   /// Update ride status (for terminal app)
-  static Future<void> updateRideStatus(String rideId, String terminalId, RideStatus status) async {
+  static Future<bool> updateRideStatus(String rideId, String terminalId, RideStatus status, {String? driverId, String? driverName}) async {
     try {
-      // Update in both collections
+      final Map<String, dynamic> updateData = {
+        'status': status.toString().split('.').last,
+      };
+
+      // Add driver info if provided
+      if (driverId != null) updateData['driverId'] = driverId;
+      if (driverName != null) updateData['driverName'] = driverName;
+
+      // Update status change timestamp
+      switch (status) {
+        case RideStatus.accepted:
+          updateData['acceptedTime'] = Timestamp.now();
+          break;
+        case RideStatus.enRoute:
+          updateData['enRouteTime'] = Timestamp.now();
+          break;
+        case RideStatus.arrived:
+          updateData['arrivedTime'] = Timestamp.now();
+          break;
+        case RideStatus.inProgress:
+          updateData['inProgressTime'] = Timestamp.now();
+          break;
+        case RideStatus.completed:
+          updateData['completedTime'] = Timestamp.now();
+          break;
+        case RideStatus.cancelled:
+          updateData['cancelledTime'] = Timestamp.now();
+          break;
+        default:
+          break;
+      }
+
+      // Update in all collections
       await Future.wait([
         _firestore
             .collection('terminals')
             .doc(terminalId)
             .collection('ride_requests')
             .doc(rideId)
-            .update({'status': status.toString().split('.').last}),
+            .update(updateData),
         
         _firestore
             .collection('rides')
             .doc(rideId)
-            .update({'status': status.toString().split('.').last}),
+            .update(updateData),
       ]);
       
+      // Also update in user's rides collection
+      final rideDoc = await _firestore.collection('rides').doc(rideId).get();
+      if (rideDoc.exists) {
+        final rideData = rideDoc.data();
+        final userId = rideData?['userId'];
+        if (userId != null) {
+          await _firestore
+              .collection('users')
+              .doc(userId)
+              .collection('rides')
+              .doc(rideId)
+              .update(updateData);
+        }
+      }
+      
       print('Ride status updated to: $status');
+      return true;
     } catch (e) {
       print('Error updating ride status: $e');
+      return false;
+    }
+  }
+
+  /// Cancel ride request (for user)
+  static Future<bool> cancelRideRequest(String rideId) async {
+    try {
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return false;
+
+      // Get ride info first
+      final rideDoc = await _firestore.collection('rides').doc(rideId).get();
+      if (!rideDoc.exists) return false;
+
+      final rideData = rideDoc.data()!;
+      final terminalId = rideData['assignedTerminal']['id'];
+
+      // Update status to cancelled
+      return await updateRideStatus(rideId, terminalId, RideStatus.cancelled);
+    } catch (e) {
+      print('Error cancelling ride request: $e');
+      return false;
     }
   }
 }
 
-// Ride Request Model
+// Ride Request Model (same as your original with some enhancements)
 class RideRequest {
   final String id;
   final String userId;
@@ -140,6 +249,16 @@ class RideRequest {
   final String distance;
   final String estimatedTime;
   final int durationInSeconds;
+  
+  // Additional fields for tracking
+  final String? driverId;
+  final String? driverName;
+  final DateTime? acceptedTime;
+  final DateTime? enRouteTime;
+  final DateTime? arrivedTime;
+  final DateTime? inProgressTime;
+  final DateTime? completedTime;
+  final DateTime? cancelledTime;
 
   RideRequest({
     required this.id,
@@ -155,6 +274,14 @@ class RideRequest {
     required this.distance,
     required this.estimatedTime,
     required this.durationInSeconds,
+    this.driverId,
+    this.driverName,
+    this.acceptedTime,
+    this.enRouteTime,
+    this.arrivedTime,
+    this.inProgressTime,
+    this.completedTime,
+    this.cancelledTime,
   });
 
   Map<String, dynamic> toJson() {
@@ -173,6 +300,14 @@ class RideRequest {
       'distance': distance,
       'estimatedTime': estimatedTime,
       'durationInSeconds': durationInSeconds,
+      'driverId': driverId,
+      'driverName': driverName,
+      'acceptedTime': acceptedTime != null ? Timestamp.fromDate(acceptedTime!) : null,
+      'enRouteTime': enRouteTime != null ? Timestamp.fromDate(enRouteTime!) : null,
+      'arrivedTime': arrivedTime != null ? Timestamp.fromDate(arrivedTime!) : null,
+      'inProgressTime': inProgressTime != null ? Timestamp.fromDate(inProgressTime!) : null,
+      'completedTime': completedTime != null ? Timestamp.fromDate(completedTime!) : null,
+      'cancelledTime': cancelledTime != null ? Timestamp.fromDate(cancelledTime!) : null,
     };
   }
 
@@ -201,10 +336,18 @@ class RideRequest {
         (status) => status.toString().split('.').last == json['status'],
         orElse: () => RideStatus.pending,
       ),
-      requestTime: (json['requestTime'] as Timestamp).toDate(),
+      requestTime: (json['requestTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
       distance: json['distance'] ?? '',
       estimatedTime: json['estimatedTime'] ?? '',
       durationInSeconds: json['durationInSeconds'] ?? 0,
+      driverId: json['driverId'],
+      driverName: json['driverName'],
+      acceptedTime: (json['acceptedTime'] as Timestamp?)?.toDate(),
+      enRouteTime: (json['enRouteTime'] as Timestamp?)?.toDate(),
+      arrivedTime: (json['arrivedTime'] as Timestamp?)?.toDate(),
+      inProgressTime: (json['inProgressTime'] as Timestamp?)?.toDate(),
+      completedTime: (json['completedTime'] as Timestamp?)?.toDate(),
+      cancelledTime: (json['cancelledTime'] as Timestamp?)?.toDate(),
     );
   }
 
@@ -222,6 +365,14 @@ class RideRequest {
     String? distance,
     String? estimatedTime,
     int? durationInSeconds,
+    String? driverId,
+    String? driverName,
+    DateTime? acceptedTime,
+    DateTime? enRouteTime,
+    DateTime? arrivedTime,
+    DateTime? inProgressTime,
+    DateTime? completedTime,
+    DateTime? cancelledTime,
   }) {
     return RideRequest(
       id: id ?? this.id,
@@ -237,6 +388,14 @@ class RideRequest {
       distance: distance ?? this.distance,
       estimatedTime: estimatedTime ?? this.estimatedTime,
       durationInSeconds: durationInSeconds ?? this.durationInSeconds,
+      driverId: driverId ?? this.driverId,
+      driverName: driverName ?? this.driverName,
+      acceptedTime: acceptedTime ?? this.acceptedTime,
+      enRouteTime: enRouteTime ?? this.enRouteTime,
+      arrivedTime: arrivedTime ?? this.arrivedTime,
+      inProgressTime: inProgressTime ?? this.inProgressTime,
+      completedTime: completedTime ?? this.completedTime,
+      cancelledTime: cancelledTime ?? this.cancelledTime,
     );
   }
 }
