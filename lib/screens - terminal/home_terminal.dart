@@ -1,20 +1,41 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/primary_button.dart';
 import '../widgets/terminal_request_trike_modal.dart';
+import 'signin_screen_terminal.dart';
 
 class TerminalHome extends StatelessWidget {
-  final String terminalName; // 👈 dynamic terminal name
+  final String terminalName;
 
   const TerminalHome({
     super.key,
-    this.terminalName = 'Terminal 1', // 👈 default value (Fix 1)
+    this.terminalName = 'Terminal 1', // 
   });
+
+  Future<void> _logout(BuildContext context) async {
+    await FirebaseAuth.instance.signOut();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const SignInScreenTerminal()),
+      (route) => false, // remove all previous routes
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.red), //temporary logout button
+            onPressed: () => _logout(context),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -29,7 +50,7 @@ class TerminalHome extends StatelessWidget {
               ),
               child: Center(
                 child: Text(
-                  terminalName, // 👈 shows correct terminal
+                  terminalName, 
                   style: const TextStyle(
                     color: Color(0xFF323232),
                     fontSize: 20,
