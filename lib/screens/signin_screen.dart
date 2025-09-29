@@ -115,71 +115,74 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-  // Handle sign in
-  Future<void> _handleSignIn() async {
-    // Clear previous error
-    setState(() {
-      _errorMessage = null;
-    });
-
-    // Manual validation
-    String? emailError = _validateField(emailController.text, 'Email');
-    String? passwordError = _validateField(passwordController.text, 'Password');
-
-    // Check for validation errors
-    if (emailError != null) {
-      setState(() => _errorMessage = emailError);
-      return;
-    }
-    if (passwordError != null) {
-      setState(() => _errorMessage = passwordError);
-      return;
-    }
-
-    setState(() {
-      _isLoading = true;
-    });
-
-    try {
-      final result = await _authenticateUser(
-        email: emailController.text.trim(),
-        password: passwordController.text,
-      );
-
-      if (result['success']) {
-        // Show success message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result['message']),
-              backgroundColor: Colors.green,
-              duration: const Duration(seconds: 2),
-            ),
-          );
-
-          // Navigate to home screen
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
-          );
-        }
-      } else {
-        setState(() {
-          _errorMessage = result['message'];
-        });
-      }
-    } catch (e) {
+    Future<void> _handleSignIn() async {
+      // Clear previous error
       setState(() {
-        _errorMessage = 'An error occurred. Please try again.';
+        _errorMessage = null;
       });
-    } finally {
-      if (mounted) {
+
+      // Manual validation
+      String? emailError = _validateField(emailController.text, 'Email');
+      String? passwordError = _validateField(passwordController.text, 'Password');
+
+      // Check for validation errors
+      if (emailError != null) {
+        setState(() => _errorMessage = emailError);
+        return;
+      }
+      if (passwordError != null) {
+        setState(() => _errorMessage = passwordError);
+        return;
+      }
+
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        final result = await _authenticateUser(
+          email: emailController.text.trim(),
+          password: passwordController.text,
+        );
+
+        if (result['success']) {
+          if (mounted) {
+            // Show "Login Successful!" message
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Login Successful!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+
+            // Optional: wait 2 seconds before navigating
+            await Future.delayed(const Duration(seconds: 2));
+
+            // Navigate to home screen
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomePage()),
+            );
+          }
+        } else {
+          setState(() {
+            _errorMessage = result['message'];
+          });
+        }
+      } catch (e) {
         setState(() {
-          _isLoading = false;
+          _errorMessage = 'An error occurred. Please try again.';
         });
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
       }
     }
-  }
+
 
   // Handle forgot password
   Future<void> _handleForgotPassword() async {

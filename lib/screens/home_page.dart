@@ -1,17 +1,14 @@
 import 'dart:ui' as ui;
-import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/navigation_bar.dart';
 import '../widgets/settings_button.dart';
-import '../widgets/timer_modal.dart';
-import '../services/ride_request_service.dart';
 import 'activity_logs_screen.dart';
 import 'account_settings_screen.dart';
 import 'request_trike.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'settings_screen.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -78,14 +75,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
     _pickupIcon = await _createCustomPickupMarker();
   }
 
-  /// Create a custom pickup location marker
-  Future<BitmapDescriptor> _createPickupMarker() async {
-    // You can replace this with a custom icon from assets like:
-    // return await _getResizedMarker('assets/icons/pickup_pin.png', 100);
-    
-    // For now, create a more visible marker
-    return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-  }
+
 
   /// Alternative: Create a custom marker from scratch (more visible)
   Future<BitmapDescriptor> _createCustomPickupMarker() async {
@@ -224,27 +214,41 @@ class _MainScreenContentState extends State<MainScreenContent> {
     );
   }
 
-  /// Show dialog when current location is out of bounds
-  void _showOutOfBoundsDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Location Out of Service Area'),
-        content: const Text(
-          'Your current location is outside our service area (Telabastagan). Please pick a location within the service area on the map.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _enableLocationPicking();
-            },
-            child: const Text('Pick Location'),
-          ),
-        ],
+/// Show dialog when current location is out of bounds
+void _showOutOfBoundsDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Location Out of Service Area'),
+      content: const Text(
+        'Your current location is outside our service area (Telabastagan). Please pick a location within the service area on the map.',
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            _enableLocationPicking();
+          },
+          style: TextButton.styleFrom(
+            backgroundColor: const Color(0xFF0097B2),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+          child: const Text(
+            'Pick Location',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
+
 
   /// Show dialog for location errors
   void _showLocationErrorDialog() {
@@ -380,11 +384,11 @@ class _MainScreenContentState extends State<MainScreenContent> {
 
     // Location of 5 terminals
     final List<LatLng> terminalLocations = [
-      const LatLng(15.116888, 120.615710), 
-      const LatLng(15.117600, 120.614200), 
-      const LatLng(15.118200, 120.617200), 
-      const LatLng(15.115600, 120.613500), 
-      const LatLng(15.115900, 120.616000), 
+      const LatLng(15.116888, 120.615710),
+      const LatLng(15.117600, 120.614200),
+      const LatLng(15.118200, 120.617200),
+      const LatLng(15.115600, 120.613500),
+      const LatLng(15.115900, 120.616000),
     ];
 
     setState(() {
@@ -509,55 +513,48 @@ class _MainScreenContentState extends State<MainScreenContent> {
     }
   }
 
-  /// Handle ride request
-  Future<void> _handleRideRequest() async {
-    final LatLng? requestLocation = _getLocationForRequest();
-    
-    if (requestLocation == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a location first.'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+Future<void> _handleRideRequest() async {
+  final requestLocation = _getLocationForRequest();
+  if (requestLocation == null) return;
 
-    // Navigate to ride request page with user location
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RequestTrikePage(
-          userLocation: requestLocation,
-          userAddress: _getAddressText(),
-        ),
-      ),
-    );
-
-    // Handle the result if needed
-    if (result != null && result is RideRequest) {
-      // Show success message or navigate to tracking screen
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Ride request submitted successfully!'),
-          backgroundColor: Colors.green,
-        ),
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return DraggableScrollableSheet(
+        initialChildSize: 0.55,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: RequestTrikePage(
+              userLocation: requestLocation,
+              userAddress: _getAddressText(),
+            ),
+          );
+        },
       );
-    }
-  }
+    },
+  );
+}
+
 
   @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
     final h = MediaQuery.of(context).size.height;
-
-    // Safe top padding (status bar)
     final safeTop = MediaQuery.of(context).padding.top;
 
     final buttonWidth = w * 0.65;
     const buttonHeight = 60.0;
 
-    /// Restrict movement inside Telabastagan vicinity
+    // Restrict map inside Telabastagan vicinity
     final LatLngBounds telabastaganBounds = LatLngBounds(
       southwest: const LatLng(15.1140, 120.6125),
       northeast: const LatLng(15.1195, 120.6185),
@@ -658,14 +655,14 @@ class _MainScreenContentState extends State<MainScreenContent> {
 
         /// Settings Button
         Positioned(
-          top: safeTop + 16, // 16 pixels below the status bar
+          top: safeTop + 16,
           right: w * 0.04,
           child: SettingsButton(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => const SettingsButton(),
+                  builder: (context) => const SettingsScreen(),
                 ),
               );
             },
