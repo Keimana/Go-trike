@@ -5,7 +5,10 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
   final String fare;
   final String paymentMethod;
   final String address;
+  final String pickUpLocation;
+  final String dropOffLocation;
   final VoidCallback onAccept;
+  final VoidCallback onCancel;
 
   const CardBuilderPassengerTerminal({
     super.key,
@@ -13,7 +16,10 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
     required this.fare,
     required this.paymentMethod,
     required this.address,
+    required this.pickUpLocation,
+    required this.dropOffLocation,
     required this.onAccept,
+    required this.onCancel,
   });
 
   @override
@@ -24,80 +30,215 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFB),
         borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Avatar / Icon
-          Container(
-            width: 50,
-            height: 50,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.grey,
-            ),
-          ),
           const SizedBox(width: 16),
 
-          // Passenger Info
+          // Passenger Info (Table Style)
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Table(
+              columnWidths: const {
+                0: IntrinsicColumnWidth(),
+                1: FlexColumnWidth(),
+              },
+              defaultVerticalAlignment: TableCellVerticalAlignment.middle,
               children: [
-                Text(
-                  name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.black,
-                  ),
+                TableRow(
+                  children: [
+                    const Text(
+                      "Name:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(name),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  "Fare: $fare",
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.black,
-                  ),
+                TableRow(
+                  children: [
+                    const Text(
+                      "Fare:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(fare),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  paymentMethod,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black,
-                  ),
+                TableRow(
+                  children: [
+                    const Text(
+                      "Payment:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(paymentMethod),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 6),
-                Text(
-                  address,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Color(0xFF323232),
-                  ),
+                TableRow(
+                  children: [
+                    const Text(
+                      "Address:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(address),
+                    ),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    const Text(
+                      "Pickup:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.green,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        pickUpLocation,
+                        style: const TextStyle(color: Colors.green),
+                      ),
+                    ),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    const Text(
+                      "Drop-off:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        dropOffLocation,
+                        style: const TextStyle(color: Colors.blue),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
 
-          // Accept Button
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0097B2),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          // Action Buttons (Accept + Cancel)
+          Column(
+            children: [
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0097B2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                ),
+                onPressed: onAccept,
+                child: const Text(
+                  "Accept",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
+                ),
               ),
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-            ),
-            onPressed: onAccept,
-            child: const Text(
-              "Accept",
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white,
-              ),
-            ),
+              const SizedBox(height: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (BuildContext context) {
+                        return AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          title: const Text(
+                            "Cancel Passenger",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          content: const Text(
+                            "Are you sure you want to cancel this passenger?",
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () {
+                                Navigator.of(context).pop(); // close modal
+                              },
+                              child: const Text(
+                                "No",
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            ),
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                              ),
+                              onPressed: () {
+                                Navigator.of(context).pop(); // close modal
+                                onCancel(); // call delete action
+                              },
+                              child: const Text(
+                                "Yes, Cancel",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                  child: const Text(
+                    "Cancel",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+
+            ],
           ),
+          
         ],
       ),
     );

@@ -22,74 +22,98 @@ class TerminalHome extends StatelessWidget {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Colors.white,
+    appBar: AppBar(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.red), //temporary logout button
-            onPressed: () => _logout(context),
-          ),
-        ],
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header Box
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              padding: const EdgeInsets.all(20),
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFB),
-                borderRadius: BorderRadius.circular(30),
-              ),
-              child: Center(
-                child: Text(
-                  terminalName, 
-                  style: const TextStyle(
-                    color: Color(0xFF323232),
-                    fontSize: 20,
-                    fontFamily: 'Roboto',
-                    fontWeight: FontWeight.w700,
+      elevation: 0,
+      automaticallyImplyLeading: false, // hides back button if any
+    ),
+    body: SafeArea(
+      child: Column(
+        children: [
+          // Logout button aligned top right
+          Align(
+            alignment: Alignment.topRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 20, top: 5),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0097B2),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 20,
+                  ),
+                ),
+                onPressed: () => _logout(context),
+                child: const Text(
+                  "Logout",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
             ),
+          ),
 
-            const Spacer(),
-
-            // Ride Request Button
-            SizedBox(
-              width: 208,
-              height: 61,
-              child: PrimaryButton(
-                text: "Ride Request",
-                icon: SvgPicture.asset(
-                  "assets/icons/person_search.svg",
-                  width: 24,
-                  height: 24,
-                  color: Colors.white,
+          // Header Box
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+            padding: const EdgeInsets.all(20),
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8FAFB),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Center(
+              child: Text(
+                terminalName,
+                style: const TextStyle(
+                  color: Color(0xFF323232),
+                  fontSize: 20,
+                  fontFamily: 'Roboto',
+                  fontWeight: FontWeight.w700,
                 ),
-                onPressed: () {
-                  showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (context) => const TerminalRequestTrikeModal(),
-                  );
-                },
               ),
             ),
+          ),
 
-            const SizedBox(height: 30),
-          ],
-        ),
+          const Spacer(),
+
+          // Ride Request Button
+          SizedBox(
+            width: 208,
+            height: 61,
+            child: PrimaryButton(
+              text: "Ride Request",
+              icon: SvgPicture.asset(
+                "assets/icons/person_search.svg",
+                width: 24,
+                height: 24,
+                color: Colors.white,
+              ),
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => const TerminalRequestTrikeModal(),
+                );
+              },
+            ),
+          ),
+
+          const SizedBox(height: 30),
+        ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:async'; // <-- add this
+import 'dart:async';
 import 'package:intl/intl.dart';
 import '../widgets/card_builder_admin.dart'; // Import the card
 
@@ -54,30 +54,31 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
 
   @override
   Widget build(BuildContext context) {
+    // ✅ Always listen to screen size changes
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            double width = constraints.maxWidth;
-
+        child: Builder(
+          builder: (context) {
             // Desktop
-            if (width >= 1200) {
+            if (screenWidth >= 1200) {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 1, child: _buildLeftColumn(width)),
-                  Expanded(flex: 2, child: _buildRightColumn(width)),
+                  Expanded(flex: 1, child: _buildLeftColumn(screenWidth)),
+                  Expanded(flex: 2, child: _buildRightColumn(screenWidth)),
                 ],
               );
             }
 
             // Tablet
-            if (width >= 800) {
+            if (screenWidth >= 800) {
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _buildCards(width),
+                  children: _buildCards(screenWidth),
                 ),
               );
             }
@@ -87,7 +88,7 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: _buildCards(width),
+                children: _buildCards(screenWidth),
               ),
             );
           },
@@ -99,12 +100,12 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
   List<Widget> _buildCards(double width) => [
         _buildHeader(width),
         const SizedBox(height: 20),
-        AdminCard(title: "Reports", child: const CardListItem("Lorem ipsum")),
+        const AdminCard(title: "Reports", child:  CardListItem("Lorem ipsum")),
         const SizedBox(height: 20),
-        AdminCard(
+        const AdminCard(
           title: "Activity Logs",
           child: Column(
-            children: const [
+            children:  [
               CardListItem("Log #1"),
               SizedBox(height: 10),
               CardListItem("Log #2"),
@@ -114,11 +115,11 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
           ),
         ),
         const SizedBox(height: 20),
-        AdminCard(title: "Ride History", child: const CardListItem("Lorem ipsum ride")),
+        const AdminCard(title: "Ride History", child:  CardListItem("Lorem ipsum ride")),
         const SizedBox(height: 20),
-        AdminCard(
+        const AdminCard(
           title: "Account and Terminal Control",
-          child: const CardListItem("Manage users and terminals"),
+          child:  CardListItem("Manage users and terminals"),
         ),
       ];
 
@@ -160,7 +161,7 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: _buildCards(width).sublist(0, 3), // first half cards
+        children: _buildCards(width).sublist(0, 3),
       ),
     );
   }
@@ -170,7 +171,7 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
       padding: const EdgeInsets.all(32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: _buildCards(width).sublist(3), // remaining cards
+        children: _buildCards(width).sublist(3),
       ),
     );
   }
@@ -182,9 +183,9 @@ class GoTrike extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Text.rich(
+    return const Text.rich(
       TextSpan(
-        children: const [
+        children:  [
           TextSpan(
             text: 'Go',
             style: TextStyle(color: Color(0xFF892CDD), fontSize: 32, fontFamily: 'Roboto', fontWeight: FontWeight.w700),
