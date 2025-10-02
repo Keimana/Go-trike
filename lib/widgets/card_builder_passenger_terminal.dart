@@ -1,23 +1,14 @@
 import 'package:flutter/material.dart';
+import '../services/ride_request_service.dart';
 
 class CardBuilderPassengerTerminal extends StatelessWidget {
-  final String name;
-  final String fare;
-  final String paymentMethod;
-  final String address;
-  final String pickUpLocation;
-  final String dropOffLocation;
+  final RideRequest rideRequest;
   final VoidCallback onAccept;
   final VoidCallback onCancel;
 
   const CardBuilderPassengerTerminal({
     super.key,
-    required this.name,
-    required this.fare,
-    required this.paymentMethod,
-    required this.address,
-    required this.pickUpLocation,
-    required this.dropOffLocation,
+    required this.rideRequest,
     required this.onAccept,
     required this.onCancel,
   });
@@ -63,7 +54,7 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(name),
+                      child: Text(rideRequest.userName),
                     ),
                   ],
                 ),
@@ -78,7 +69,7 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(fare),
+                      child: Text('₱${rideRequest.fareAmount.toStringAsFixed(2)}'),
                     ),
                   ],
                 ),
@@ -93,7 +84,7 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(paymentMethod),
+                      child: Text(rideRequest.paymentMethod),
                     ),
                   ],
                 ),
@@ -108,7 +99,7 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(address),
+                      child: Text(rideRequest.userAddress),
                     ),
                   ],
                 ),
@@ -125,7 +116,7 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        pickUpLocation,
+                        rideRequest.userAddress,
                         style: const TextStyle(color: Colors.green),
                       ),
                     ),
@@ -144,8 +135,8 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        dropOffLocation,
-                        style: const TextStyle(color: Colors.blue),
+                        "Not Selected",
+                        style: TextStyle(color: Colors.grey[600]),
                       ),
                     ),
                   ],
@@ -176,69 +167,67 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (BuildContext context) {
-                        return AlertDialog(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          title: const Text(
-                            "Cancel Passenger",
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          content: const Text(
-                            "Are you sure you want to cancel this passenger?",
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () {
-                                Navigator.of(context).pop(); // close modal
-                              },
-                              child: const Text(
-                                "No",
-                                style: TextStyle(color: Colors.grey),
-                              ),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                ),
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        title: const Text(
+                          "Cancel Passenger",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        content: const Text(
+                          "Are you sure you want to cancel this passenger?",
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop(); // close modal
+                            },
+                            child: const Text(
+                              "No",
+                              style: TextStyle(color: Colors.grey),
                             ),
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
-                              ),
-                              onPressed: () {
-                                Navigator.of(context).pop(); // close modal
-                                onCancel(); // call delete action
-                              },
-                              child: const Text(
-                                "Yes, Cancel",
-                                style: TextStyle(color: Colors.white),
-                              ),
+                          ),
+                          ElevatedButton(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
                             ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                  child: const Text(
-                    "Cancel",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white,
-                    ),
+                            onPressed: () {
+                              Navigator.of(context).pop(); // close modal
+                              onCancel(); // call delete action
+                            },
+                            child: const Text(
+                              "Yes, Cancel",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                child: const Text(
+                  "Cancel",
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white,
                   ),
                 ),
-
+              ),
             ],
           ),
-          
         ],
       ),
     );

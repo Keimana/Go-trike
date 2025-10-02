@@ -140,15 +140,22 @@ class RideRequestService {
   }
 
   /// Update ride status (for terminal app)
-  static Future<bool> updateRideStatus(String rideId, String terminalId, RideStatus status, {String? driverId, String? driverName}) async {
+  /// Now accepts todaNumber instead of driverId/driverName
+  static Future<bool> updateRideStatus(
+    String rideId, 
+    String terminalId, 
+    RideStatus status, 
+    {String? driverId, String? driverName, String? todaNumber}
+  ) async {
     try {
       final Map<String, dynamic> updateData = {
         'status': status.toString().split('.').last,
       };
 
-      // Add driver info if provided
-      if (driverId != null) updateData['driverId'] = driverId;
-      if (driverName != null) updateData['driverName'] = driverName;
+      // Add TODA number if provided
+      if (todaNumber != null) {
+        updateData['todaNumber'] = todaNumber;
+      }
 
       // Update status change timestamp
       switch (status) {
@@ -234,7 +241,7 @@ class RideRequestService {
   }
 }
 
-// Ride Request Model (same as your original with some enhancements)
+// Ride Request Model
 class RideRequest {
   final String id;
   final String userId;
@@ -251,8 +258,7 @@ class RideRequest {
   final int durationInSeconds;
   
   // Additional fields for tracking
-  final String? driverId;
-  final String? driverName;
+  final String? todaNumber; // Changed from driverId/driverName
   final DateTime? acceptedTime;
   final DateTime? enRouteTime;
   final DateTime? arrivedTime;
@@ -274,8 +280,7 @@ class RideRequest {
     required this.distance,
     required this.estimatedTime,
     required this.durationInSeconds,
-    this.driverId,
-    this.driverName,
+    this.todaNumber,
     this.acceptedTime,
     this.enRouteTime,
     this.arrivedTime,
@@ -300,8 +305,7 @@ class RideRequest {
       'distance': distance,
       'estimatedTime': estimatedTime,
       'durationInSeconds': durationInSeconds,
-      'driverId': driverId,
-      'driverName': driverName,
+      'todaNumber': todaNumber,
       'acceptedTime': acceptedTime != null ? Timestamp.fromDate(acceptedTime!) : null,
       'enRouteTime': enRouteTime != null ? Timestamp.fromDate(enRouteTime!) : null,
       'arrivedTime': arrivedTime != null ? Timestamp.fromDate(arrivedTime!) : null,
@@ -340,8 +344,7 @@ class RideRequest {
       distance: json['distance'] ?? '',
       estimatedTime: json['estimatedTime'] ?? '',
       durationInSeconds: json['durationInSeconds'] ?? 0,
-      driverId: json['driverId'],
-      driverName: json['driverName'],
+      todaNumber: json['todaNumber'],
       acceptedTime: (json['acceptedTime'] as Timestamp?)?.toDate(),
       enRouteTime: (json['enRouteTime'] as Timestamp?)?.toDate(),
       arrivedTime: (json['arrivedTime'] as Timestamp?)?.toDate(),
@@ -365,8 +368,7 @@ class RideRequest {
     String? distance,
     String? estimatedTime,
     int? durationInSeconds,
-    String? driverId,
-    String? driverName,
+    String? todaNumber,
     DateTime? acceptedTime,
     DateTime? enRouteTime,
     DateTime? arrivedTime,
@@ -388,8 +390,7 @@ class RideRequest {
       distance: distance ?? this.distance,
       estimatedTime: estimatedTime ?? this.estimatedTime,
       durationInSeconds: durationInSeconds ?? this.durationInSeconds,
-      driverId: driverId ?? this.driverId,
-      driverName: driverName ?? this.driverName,
+      todaNumber: todaNumber ?? this.todaNumber,
       acceptedTime: acceptedTime ?? this.acceptedTime,
       enRouteTime: enRouteTime ?? this.enRouteTime,
       arrivedTime: arrivedTime ?? this.arrivedTime,

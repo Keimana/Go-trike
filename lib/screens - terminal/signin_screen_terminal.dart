@@ -21,30 +21,38 @@ class _SignInScreenTerminalState extends State<SignInScreenTerminal> {
     setState(() => _isLoading = true);
 
     try {
-      // 🔹 1. Sign in with FirebaseAuth
+      // 1. Sign in
       UserCredential userCredential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
       );
 
-      String uid = userCredential.user!.uid;
+      final uid = userCredential.user!.uid;
 
-      // 🔹 2. Fetch terminal data from Firestore
-      DocumentSnapshot terminalDoc =
-          await FirebaseFirestore.instance.collection('terminals').doc(uid).get();
+      // 2. Query terminals collection to match uid field
+      final query = await FirebaseFirestore.instance
+          .collection('terminals')
+          .where('uid', isEqualTo: uid)
+          .limit(1)
+          .get();
 
-      if (!terminalDoc.exists) {
-        throw Exception("Terminal data not found in Firestore");
+      if (query.docs.isEmpty) {
+        throw Exception("No terminal found for uid=$uid");
       }
 
-      String terminalName = terminalDoc['terminalName'];
+      final terminalDoc = query.docs.first;
+      final terminalId = terminalDoc.id;
+      final terminalName = terminalId;  
 
-      // 🔹 3. Navigate to Home with terminalName
+      // 3. Navigate to Home with BOTH
       Navigator.pushReplacementNamed(
         context,
         '/home',
-        arguments: terminalName,
+        arguments: {
+          'terminalId': terminalId,
+          'terminalName': terminalName,
+        },
       );
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
