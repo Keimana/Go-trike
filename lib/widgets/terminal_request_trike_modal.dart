@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import '../widgets/card_builder_passenger_terminal.dart';
-import 'terminal_modal_accept.dart'; //  import your accept modal
+import '../services/ride_request_service.dart';
+import 'terminal_modal_accept.dart';
 
 class TerminalRequestTrikeModal extends StatefulWidget {
-  const TerminalRequestTrikeModal({super.key});
+  final String terminalId;
+
+  const TerminalRequestTrikeModal({
+    super.key,
+    required this.terminalId,
+  });
 
   @override
   State<TerminalRequestTrikeModal> createState() =>
@@ -14,37 +20,13 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
     with SingleTickerProviderStateMixin {
   bool _isVisible = false;
 
-  //  Passenger list (sample data)
-  List<Map<String, String>> passengers = [
-    {
-      "name": "Ronan",
-      "fare": "₱140.00",
-      "payment": "Cash",
-      "address": "Lorem ipsum Street, Pampanga, Manila",
-      "pickup": "SM City Pampanga",
-      "dropoff": "Manila Central Terminal",
-    },
-    {
-      "name": "Angela",
-      "fare": "₱95.00",
-      "payment": "GCash",
-      "address": "San Fernando, Pampanga",
-      "pickup": "WalterMart",
-      "dropoff": "Angeles Terminal",
-    },
-  ];
-
   @override
   void initState() {
     super.initState();
     Future.delayed(const Duration(milliseconds: 100), () {
-      setState(() => _isVisible = true);
-    });
-  }
-
-  void _deletePassenger(int index) {
-    setState(() {
-      passengers.removeAt(index);
+      if (mounted) {
+        setState(() => _isVisible = true);
+      }
     });
   }
 
@@ -88,8 +70,31 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
 
                 // Passenger Request List
                 Expanded(
-                  child: passengers.isEmpty
-                      ? const Center(
+                  child: StreamBuilder<List<RideRequest>>(
+                    stream: RideRequestService.listenToTerminalRides(
+                        widget.terminalId),
+                    builder: (context, snapshot) {
+                      // Loading state
+                      if (snapshot.connectionState ==
+                          ConnectionState.waiting) {
+                        return const Center(
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+
+                      // Error state
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Text(
+                            'Error loading requests: ${snapshot.error}',
+                            style: const TextStyle(color: Colors.red),
+                          ),
+                        );
+                      }
+
+                      // No data or empty list
+                      if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(
                           child: Text(
                             "No passenger requests",
                             style: TextStyle(
@@ -97,30 +102,121 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                               color: Colors.grey,
                             ),
                           ),
-                        )
-                      : ListView.builder(
-                          itemCount: passengers.length,
-                          itemBuilder: (context, index) {
-                            final p = passengers[index];
-                            return CardBuilderPassengerTerminal(
-                              name: p["name"]!,
-                              fare: p["fare"]!,
-                              paymentMethod: p["payment"]!,
-                              address: p["address"]!,
-                              pickUpLocation: p["pickup"]!,
-                              dropOffLocation: p["dropoff"]!,
-                              onAccept: () {
-                                //  Open TODA Number modal
+                        );
+                      }
+
+                      // Display list of ride requests
+                      final rideRequests = snapshot.data!;
+
+                      return ListView.builder(
+                        itemCount: rideRequests.length,
+                        itemBuilder: (context, index) {
+                          final rideRequest = rideRequests[index];
+
+                          return CardBuilderPassengerTerminal(
+                            rideRequest: rideRequest,
+                            onAccept: () async {
+                              // Show TODA Number modal to get input
+                              final todaNumber = await showDialog<String>(
+                                context: context,
+                                builder: (context) =>
+                                    const TerminalModalAccept(),
+                              );
+
+                              // If TODA number entered, accept the ride
+                              if (todaNumber != null && todaNumber.isNotEmpty && mounted) {
+                                // Show loading dialog
                                 showDialog(
                                   context: context,
-                                  builder: (context) =>
-                                      const TerminalModalAccept(),
+                                  barrierDismissible: false,
+                                  builder: (context) => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
                                 );
-                              },
-                              onCancel: () => _deletePassenger(index), // 
-                            );
-                          },
-                        ),
+
+                                // Accept the ride with TODA number
+                                final success = await RideRequestService
+                                    .updateRideStatus(
+                                  rideRequest.id,
+                                  widget.terminalId,
+                                  RideStatus.accepted,
+                                  todaNumber: todaNumber,
+                                );
+
+                                // Close loading dialog
+                                if (mounted) {
+                                  Navigator.of(context).pop();
+                                }
+
+                                if (success && mounted) {
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                          'Ride accepted by TODA #$todaNumber'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } else if (mounted) {
+                                  ScaffoldMessenger.of(context)
+                                      .showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'Failed to accept ride request'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                            onCancel: () async {
+                              // Show loading dialog
+                              showDialog(
+                                context: context,
+                                barrierDismissible: false,
+                                builder: (context) => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                              );
+
+                              // Cancel the ride
+                              final success = await RideRequestService
+                                  .updateRideStatus(
+                                rideRequest.id,
+                                widget.terminalId,
+                                RideStatus.cancelled,
+                              );
+
+                              // Close loading dialog
+                              if (mounted) {
+                                Navigator.of(context).pop();
+                              }
+
+                              if (success && mounted) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                    content:
+                                        Text('Ride request cancelled'),
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                );
+                              } else if (mounted) {
+                                ScaffoldMessenger.of(context)
+                                    .showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                        'Failed to cancel ride request'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ],
             ),

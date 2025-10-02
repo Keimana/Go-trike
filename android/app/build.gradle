@@ -48,7 +48,7 @@ android {
         applicationId "com.example.demo_app"
 
         // ✅ Firebase Auth now requires minSdk 23
-        minSdkVersion flutter.minSdkVersion
+        minSdkVersion 23
 
         // ✅ Match Flutter's recommended target
         targetSdkVersion flutter.targetSdkVersion
