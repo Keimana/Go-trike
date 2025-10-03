@@ -28,7 +28,7 @@ if (flutterVersionName == null) {
 android {
     namespace "com.example.demo_app"
     compileSdk flutter.compileSdkVersion
-    ndkVersion rootProject.ext.has("ndkVersion") ? rootProject.ext.ndkVersion : "25.1.8937393"
+    ndkVersion rootProject.ext.has("ndkVersion") ? rootProject.ext.ndkVersion : "26.1.10909125"
 
     compileOptions {
         // ✅ Force Java 11 for Firebase & Google Maps

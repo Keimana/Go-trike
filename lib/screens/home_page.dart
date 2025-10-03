@@ -176,7 +176,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
       // Get address from coordinates (you might want to use geocoding)
       _currentAddress = "Current Location"; // Placeholder
       
-      print('Current location: ${_currentUserLocation}');
+      print('Current location: $_currentUserLocation');
     } catch (e) {
       print('Error getting location: $e');
       _showLocationErrorDialog();
