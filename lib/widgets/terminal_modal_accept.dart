@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart'; // <-- needed for FilteringTextInputFormatter
+import 'package:flutter/services.dart';
 import '../widgets/primary_button.dart';
-import 'terminal_modal_pickup.dart';
 
 class TerminalModalAccept extends StatefulWidget {
   const TerminalModalAccept({super.key});
@@ -19,41 +18,29 @@ class _TerminalModalAcceptState extends State<TerminalModalAccept> {
     super.dispose();
   }
 
-void _onConfirm() {
-  final todaNumber = todaController.text.trim();
+  void _onConfirm() {
+    final todaNumber = todaController.text.trim();
 
-  //  check if empty
-  if (todaNumber.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Please enter TODA Number")),
-    );
-    return;
-  }
-
-  //  check if digits only
-  final isDigitsOnly = RegExp(r'^\d+$').hasMatch(todaNumber);
-  if (!isDigitsOnly) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("TODA Number must contain digits only")),
-    );
-    return;
-  }
-
-  Navigator.pop(context);
-
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) {
-      return const Dialog(
-        insetPadding: EdgeInsets.all(20),
-        backgroundColor: Colors.transparent,
-        child: TerminalModalPickup(),
+    // Check if empty
+    if (todaNumber.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter TODA Number")),
       );
-    },
-  );
-}
+      return;
+    }
 
+    // Check if digits only
+    final isDigitsOnly = RegExp(r'^\d+$').hasMatch(todaNumber);
+    if (!isDigitsOnly) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("TODA Number must contain digits only")),
+      );
+      return;
+    }
+
+    // Return the TODA number to the caller
+    Navigator.pop(context, todaNumber);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -89,7 +76,7 @@ void _onConfirm() {
 
             const SizedBox(height: 20),
 
-            // <-- Number-only TextField (direct)
+            // Number-only TextField
             TextField(
               controller: todaController,
               keyboardType: TextInputType.number,

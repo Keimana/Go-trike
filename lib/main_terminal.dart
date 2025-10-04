@@ -29,9 +29,14 @@ class TerminalApp extends StatelessWidget {
               builder: (_) => const SignInScreenTerminal(),
             );
           case '/home':
-            final terminalName = settings.arguments as String? ?? 'Terminal 1';
+            final args = settings.arguments as Map<String, dynamic>? ?? {};
+            final terminalId = args['terminalId'] as String? ?? '';
+            final terminalName = args['terminalName'] as String? ?? 'Terminal';
             return MaterialPageRoute(
-              builder: (_) => TerminalHome(terminalName: terminalName),
+              builder: (_) => TerminalHome(
+                terminalId: terminalId,
+                terminalName: terminalName,
+              ),
             );
         }
         return null;

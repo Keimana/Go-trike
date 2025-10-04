@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:intl/intl.dart';
-import '../widgets/card_builder_admin.dart'; // Import the card
+import '../widgets/card_builder_admin.dart'; // AdminCard + FullscreenPage + CardListItem
 
 void main() {
   runApp(const UiAdminSideReports());
@@ -33,11 +33,34 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
   late Timer _timer;
   String _formattedDate = "";
 
+  late final List<Map<String, dynamic>> cardsData;
+
   @override
   void initState() {
     super.initState();
     _updateTime();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
+
+    cardsData = [
+      {"title": "Reports", "child": const CardListItem("Lorem ipsum")},
+      {
+        "title": "Activity Logs",
+        "child": Column(
+          children: const [
+            CardListItem("Log #1"),
+            SizedBox(height: 10),
+            CardListItem("Log #2"),
+            SizedBox(height: 10),
+            CardListItem("Log #3"),
+          ],
+        ),
+      },
+      {"title": "Ride History", "child": const CardListItem("Lorem ipsum ride")},
+      {
+        "title": "Account and Terminal Control",
+        "child": const CardListItem("Manage users and terminals")
+      },
+    ];
   }
 
   void _updateTime() {
@@ -52,43 +75,61 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
     super.dispose();
   }
 
+  List<Widget> _buildCardsWidgets() {
+    final List<Widget> widgets = [
+      _buildHeader(MediaQuery.of(context).size.width),
+      const SizedBox(height: 20)
+    ];
+
+    for (int i = 0; i < cardsData.length; i++) {
+      final data = cardsData[i];
+      widgets.add(
+        AdminCard(
+          title: data["title"],
+          child: data["child"],
+          onFullscreenTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => FullscreenPage(
+                  title: data["title"],
+                  child: data["child"],
+                ),
+              ),
+            );
+          },
+        ),
+      );
+      if (i != cardsData.length - 1) widgets.add(const SizedBox(height: 20));
+    }
+
+    return widgets;
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ✅ Always listen to screen size changes
     final screenWidth = MediaQuery.of(context).size.width;
+    final currentCards = _buildCardsWidgets();
 
     return Scaffold(
       body: SafeArea(
         child: Builder(
           builder: (context) {
-            // Desktop
             if (screenWidth >= 1200) {
               return Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(flex: 1, child: _buildLeftColumn(screenWidth)),
-                  Expanded(flex: 2, child: _buildRightColumn(screenWidth)),
+                  Expanded(flex: 1, child: _buildLeftColumn(currentCards)),
+                  Expanded(flex: 2, child: _buildRightColumn(currentCards)),
                 ],
               );
             }
 
-            // Tablet
-            if (screenWidth >= 800) {
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _buildCards(screenWidth),
-                ),
-              );
-            }
-
-            // Mobile
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(screenWidth >= 800 ? 24 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: _buildCards(screenWidth),
+                children: currentCards,
               ),
             );
           },
@@ -97,35 +138,28 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
     );
   }
 
-  List<Widget> _buildCards(double width) => [
-        _buildHeader(width),
-        const SizedBox(height: 20),
-        const AdminCard(title: "Reports", child:  CardListItem("Lorem ipsum")),
-        const SizedBox(height: 20),
-        const AdminCard(
-          title: "Activity Logs",
-          child: Column(
-            children:  [
-              CardListItem("Log #1"),
-              SizedBox(height: 10),
-              CardListItem("Log #2"),
-              SizedBox(height: 10),
-              CardListItem("Log #3"),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        const AdminCard(title: "Ride History", child:  CardListItem("Lorem ipsum ride")),
-        const SizedBox(height: 20),
-        const AdminCard(
-          title: "Account and Terminal Control",
-          child:  CardListItem("Manage users and terminals"),
-        ),
-      ];
+  Widget _buildLeftColumn(List<Widget> cards) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: cards.sublist(1, 4),
+      ),
+    );
+  }
+
+  Widget _buildRightColumn(List<Widget> cards) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: cards.sublist(4),
+      ),
+    );
+  }
 
   Widget _buildHeader(double width) {
     bool isMobile = width < 600;
-
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: isMobile ? 0 : 24),
       child: isMobile
@@ -153,28 +187,11 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(_formattedDate, style: const TextStyle(fontSize: 16, color: Color(0xFF323232))),
+        child: Text(
+          _formattedDate,
+          style: const TextStyle(fontSize: 16, color: Color(0xFF323232)),
+        ),
       );
-
-  Widget _buildLeftColumn(double width) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _buildCards(width).sublist(0, 3),
-      ),
-    );
-  }
-
-  Widget _buildRightColumn(double width) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: _buildCards(width).sublist(3),
-      ),
-    );
-  }
 }
 
 // ---------------- GO TRIKE LOGO ----------------
@@ -185,18 +202,21 @@ class GoTrike extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Text.rich(
       TextSpan(
-        children:  [
+        children: [
           TextSpan(
             text: 'Go',
-            style: TextStyle(color: Color(0xFF892CDD), fontSize: 32, fontFamily: 'Roboto', fontWeight: FontWeight.w700),
+            style: TextStyle(
+                color: Color(0xFF892CDD), fontSize: 32, fontFamily: 'Roboto', fontWeight: FontWeight.w700),
           ),
           TextSpan(
             text: ' ',
-            style: TextStyle(color: Color(0xFF34C759), fontSize: 32, fontFamily: 'Roboto', fontWeight: FontWeight.w700),
+            style: TextStyle(
+                color: Color(0xFF34C759), fontSize: 32, fontFamily: 'Roboto', fontWeight: FontWeight.w700),
           ),
           TextSpan(
             text: 'Trike',
-            style: TextStyle(color: Color(0xFFFF9500), fontSize: 32, fontFamily: 'Roboto', fontWeight: FontWeight.w700),
+            style: TextStyle(
+                color: Color(0xFFFF9500), fontSize: 32, fontFamily: 'Roboto', fontWeight: FontWeight.w700),
           ),
         ],
       ),

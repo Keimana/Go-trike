@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
@@ -60,6 +61,11 @@ class _MainScreenContentState extends State<MainScreenContent> {
   BitmapDescriptor? _terminalIcon;
   BitmapDescriptor? _pickupIcon;
 
+  // Cooldown variables
+  bool _isCooldown = false;
+  int _cooldownSeconds = 0;
+  Timer? _cooldownTimer;
+
   @override
   void initState() {
     super.initState();
@@ -68,37 +74,65 @@ class _MainScreenContentState extends State<MainScreenContent> {
     _getCurrentLocation();
   }
 
+  @override
+  void dispose() {
+    _cooldownTimer?.cancel();
+    _mapController?.dispose();
+    super.dispose();
+  }
+
+  /// Start cooldown (5 minutes = 300 seconds)
+  void _startCooldown() {
+    setState(() {
+      _isCooldown = true;
+      _cooldownSeconds = 300;
+    });
+
+    _cooldownTimer?.cancel();
+    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_cooldownSeconds <= 1) {
+        timer.cancel();
+        setState(() {
+          _isCooldown = false;
+          _cooldownSeconds = 0;
+        });
+      } else {
+        setState(() {
+          _cooldownSeconds--;
+        });
+      }
+    });
+  }
+
   /// Load custom markers for terminals and pickup location
   Future<void> _loadCustomMarkers() async {
-    _terminalIcon = await _getResizedMarker('assets/icons/terminal.png', 120);
+    try {
+      _terminalIcon = await _getResizedMarker('assets/icons/terminal.png', 120);
+    } catch (e) {
+      _terminalIcon = BitmapDescriptor.defaultMarker;
+    }
     // Use the more elaborate custom pickup marker for better visibility
     _pickupIcon = await _createCustomPickupMarker();
   }
 
-
-
   /// Alternative: Create a custom marker from scratch (more visible)
   Future<BitmapDescriptor> _createCustomPickupMarker() async {
-    // This creates a custom colored marker - you can customize this further
     const int size = 150;
     final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
     final Canvas canvas = Canvas(pictureRecorder);
-    
-    // Draw a custom pin shape
+
     final Paint paint = Paint()
       ..color = Colors.green
       ..style = PaintingStyle.fill;
-    
+
     final Paint borderPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3;
-    
-    // Draw the main pin shape
+
     canvas.drawCircle(const Offset(75, 60), 30, paint);
     canvas.drawCircle(const Offset(75, 60), 30, borderPaint);
-    
-    // Draw the pin point
+
     final Path pinPath = Path();
     pinPath.moveTo(75, 90);
     pinPath.lineTo(55, 60);
@@ -106,21 +140,19 @@ class _MainScreenContentState extends State<MainScreenContent> {
     pinPath.close();
     canvas.drawPath(pinPath, paint);
     canvas.drawPath(pinPath, borderPaint);
-    
-    // Add a center dot
+
     final Paint centerPaint = Paint()
       ..color = Colors.white
       ..style = PaintingStyle.fill;
     canvas.drawCircle(const Offset(75, 60), 10, centerPaint);
-    
+
     final ui.Picture picture = pictureRecorder.endRecording();
     final ui.Image image = await picture.toImage(size, size);
     final ByteData? bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    
+
     if (bytes != null) {
       return BitmapDescriptor.fromBytes(bytes.buffer.asUint8List());
     } else {
-      // Fallback to default marker
       return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
     }
   }
@@ -131,11 +163,11 @@ class _MainScreenContentState extends State<MainScreenContent> {
     const double maxLat = 15.1195;
     const double minLng = 120.6125;
     const double maxLng = 120.6185;
-    
-    return location.latitude >= minLat && 
-           location.latitude <= maxLat &&
-           location.longitude >= minLng && 
-           location.longitude <= maxLng;
+
+    return location.latitude >= minLat &&
+        location.latitude <= maxLat &&
+        location.longitude >= minLng &&
+        location.longitude <= maxLng;
   }
 
   /// Get user's current location
@@ -145,14 +177,12 @@ class _MainScreenContentState extends State<MainScreenContent> {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          print('Location permissions are denied');
           _showLocationPermissionDialog();
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        print('Location permissions are permanently denied');
         _showLocationPermissionDialog();
         return;
       }
@@ -173,12 +203,9 @@ class _MainScreenContentState extends State<MainScreenContent> {
         _currentUserLocation = currentLocation;
       });
 
-      // Get address from coordinates (you might want to use geocoding)
       _currentAddress = "Current Location"; // Placeholder
-      
-      print('Current location: $_currentUserLocation');
+
     } catch (e) {
-      print('Error getting location: $e');
       _showLocationErrorDialog();
     }
   }
@@ -214,41 +241,39 @@ class _MainScreenContentState extends State<MainScreenContent> {
     );
   }
 
-/// Show dialog when current location is out of bounds
-void _showOutOfBoundsDialog() {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Location Out of Service Area'),
-      content: const Text(
-        'Your current location is outside our service area (Telabastagan). Please pick a location within the service area on the map.',
-      ),
-      actions: [
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            _enableLocationPicking();
-          },
-          style: TextButton.styleFrom(
-            backgroundColor: const Color(0xFF0097B2),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-          child: const Text(
-            'Pick Location',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+  /// Show dialog when current location is out of bounds
+  void _showOutOfBoundsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Location Out of Service Area'),
+        content: const Text(
+          'Your current location is outside our service area (Telabastagan). Please pick a location within the service area on the map.',
         ),
-      ],
-    ),
-  );
-}
-
-
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _enableLocationPicking();
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF0097B2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text(
+              'Pick Location',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Show dialog for location errors
   void _showLocationErrorDialog() {
@@ -285,10 +310,9 @@ void _showOutOfBoundsDialog() {
       _isPickingLocation = true;
       _useCurrentLocation = false;
     });
-    
-    // Update markers to show/hide pickup marker
+
     _updateMarkers();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Tap on the map to pick your location'),
@@ -317,10 +341,8 @@ void _showOutOfBoundsDialog() {
       _isPickingLocation = false;
     });
 
-    // Refresh markers to show the selected location
     _updateMarkers();
 
-    // Move camera to the selected location for better visibility
     if (_mapController != null) {
       _mapController!.animateCamera(
         CameraUpdate.newLatLngZoom(tappedLocation, 17.0),
@@ -369,20 +391,16 @@ void _showOutOfBoundsDialog() {
     );
     final ui.FrameInfo fi = await codec.getNextFrame();
     final Uint8List resizedData =
-        (await fi.image.toByteData(format: ui.ImageByteFormat.png))!
-            .buffer
-            .asUint8List();
+        (await fi.image.toByteData(format: ui.ImageByteFormat.png))!.buffer.asUint8List();
     return BitmapDescriptor.fromBytes(resizedData);
   }
 
   /// Load multiple terminal markers
   Future<void> _loadTerminalMarkers() async {
-    // Wait for custom markers to load if they haven't already
     if (_terminalIcon == null) {
       await _loadCustomMarkers();
     }
 
-    // Location of 5 terminals
     final List<LatLng> terminalLocations = [
       const LatLng(15.116888, 120.615710),
       const LatLng(15.117600, 120.614200),
@@ -393,7 +411,6 @@ void _showOutOfBoundsDialog() {
 
     setState(() {
       _markers.clear();
-      // Add terminal markers
       for (int i = 0; i < terminalLocations.length; i++) {
         _markers.add(
           Marker(
@@ -409,25 +426,21 @@ void _showOutOfBoundsDialog() {
       }
     });
 
-    // Add pickup location marker if exists
     _updatePickupMarker();
   }
 
   /// Update markers (terminals + pickup location)
   void _updateMarkers() {
-    // Location of 5 terminals
     final List<LatLng> terminalLocations = [
-      const LatLng(15.116888, 120.615710), 
-      const LatLng(15.117600, 120.614200), 
-      const LatLng(15.118200, 120.617200), 
-      const LatLng(15.115600, 120.613500), 
-      const LatLng(15.115900, 120.616000), 
+      const LatLng(15.116888, 120.615710),
+      const LatLng(15.117600, 120.614200),
+      const LatLng(15.118200, 120.617200),
+      const LatLng(15.115600, 120.613500),
+      const LatLng(15.115900, 120.616000),
     ];
 
     setState(() {
       _markers.clear();
-      
-      // Add terminal markers
       for (int i = 0; i < terminalLocations.length; i++) {
         _markers.add(
           Marker(
@@ -441,18 +454,14 @@ void _showOutOfBoundsDialog() {
           ),
         );
       }
-      
-      // Add pickup location marker
       _updatePickupMarker();
     });
   }
 
   /// Update pickup location marker
   void _updatePickupMarker() {
-    // Remove existing pickup marker
     _markers.removeWhere((marker) => marker.markerId.value == 'selected_location');
-    
-    // Add selected location marker if exists and not using current location
+
     if (_selectedLocation != null && !_useCurrentLocation) {
       _markers.add(
         Marker(
@@ -464,7 +473,6 @@ void _showOutOfBoundsDialog() {
             snippet: "Lat: ${_selectedLocation!.latitude.toStringAsFixed(4)}, Lng: ${_selectedLocation!.longitude.toStringAsFixed(4)}",
           ),
           onTap: () {
-            // Optional: Show detailed info when marker is tapped
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
@@ -513,37 +521,48 @@ void _showOutOfBoundsDialog() {
     }
   }
 
-Future<void> _handleRideRequest() async {
-  final requestLocation = _getLocationForRequest();
-  if (requestLocation == null) return;
-
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return DraggableScrollableSheet(
-        initialChildSize: 0.55,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) {
-          return Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: RequestTrikePage(
-              userLocation: requestLocation,
-              userAddress: _getAddressText(),
-            ),
-          );
-        },
+  Future<void> _handleRideRequest() async {
+    final requestLocation = _getLocationForRequest();
+    if (requestLocation == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a pickup location first'), backgroundColor: Colors.red),
       );
-    },
-  );
-}
+      return;
+    }
 
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: RequestTrikePage(
+                userLocation: requestLocation,
+                userAddress: _getAddressText(),
+                // Callback used by RequestTrikePage when OK is pressed in success dialog:
+                onRequestConfirmed: () {
+                  // This callback runs after the success dialog's OK has closed the dialog.
+                  // Close the bottom sheet and start cooldown.
+                  Navigator.of(context).pop(); // Close bottom sheet
+                  _startCooldown();
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -693,25 +712,27 @@ Future<void> _handleRideRequest() async {
             ),
           ),
 
-        /// Request Trike Button
+        /// Request Trike Button (with cooldown)
         Positioned(
           bottom: h * 0.15,
           left: (w - buttonWidth) / 2,
           child: GestureDetector(
-            onTap: _handleRideRequest,
+            onTap: _isCooldown ? null : _handleRideRequest,
             child: Container(
               width: buttonWidth,
               height: buttonHeight,
               decoration: ShapeDecoration(
-                color: const Color(0xFF0097B2),
+                color: _isCooldown ? Colors.grey : const Color(0xFF0097B2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
               alignment: Alignment.center,
-              child: const Text(
-                'Request Trike',
-                style: TextStyle(
+              child: Text(
+                _isCooldown
+                    ? "(${(_cooldownSeconds ~/ 60).toString().padLeft(2, '0')}:${(_cooldownSeconds % 60).toString().padLeft(2, '0')})"
+                    : "Request Trike",
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,
                   fontWeight: FontWeight.w700,

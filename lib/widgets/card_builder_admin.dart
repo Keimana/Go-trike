@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class AdminCard extends StatelessWidget {
   final String title;
@@ -38,19 +37,12 @@ class AdminCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: Colors.black),
               ),
               GestureDetector(
-                onTap: onFullscreenTap ?? () => debugPrint("$title fullscreen clicked!"),
-                child: SvgPicture.asset(
-                  "assets/fullscreen.svg",
-                  height: 24,
-                  width: 24,
-                ),
-              )
+                onTap: onFullscreenTap,
+                child: const Icon(Icons.fullscreen, size: 24),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -61,7 +53,32 @@ class AdminCard extends StatelessWidget {
   }
 }
 
-// A small helper for card list items
+// ------------------ Fullscreen Page ------------------
+class FullscreenPage extends StatelessWidget {
+  final String title;
+  final Widget child;
+
+  const FullscreenPage({super.key, required this.title, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(title),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: child,
+      ),
+    );
+  }
+}
+
+// ------------------ Card Content Helper ------------------
 class CardListItem extends StatelessWidget {
   final String text;
 
