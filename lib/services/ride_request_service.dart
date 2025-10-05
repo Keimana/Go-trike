@@ -32,7 +32,7 @@ class RideRequestService {
       print('Nearest terminal found: ${assignment.terminal.name}');
       print('Distance: ${assignment.distance}, Time: ${assignment.estimatedTime}');
 
-      // Step 2: Create ride request object
+      // Step 2: Create ride request object WITHOUT ID
       final RideRequest rideRequest = RideRequest(
         id: '', // Will be set by Firestore
         userId: currentUser.uid,
@@ -57,16 +57,26 @@ class RideRequestService {
           .collection('ride_requests')
           .add(rideRequest.toJson());
 
-      // Update the ride request with the generated ID
+      print('Generated ride ID: ${docRef.id}'); // DEBUG
+
+      // Step 4: Create the final ride request with the correct ID
       final RideRequest finalRideRequest = rideRequest.copyWith(id: docRef.id);
 
-      // Step 4: Also save to a global rides collection for tracking
+      // Step 5: UPDATE the terminal document with the correct ID
+      await _firestore
+          .collection('terminals')
+          .doc(assignment.terminal.id)
+          .collection('ride_requests')
+          .doc(docRef.id)
+          .update({'id': docRef.id}); // Add the ID field
+
+      // Step 6: Save to global rides collection with CORRECT ID
       await _firestore
           .collection('rides')
           .doc(docRef.id)
           .set(finalRideRequest.toJson());
 
-      // Step 5: Save to user's personal rides collection
+      // Step 7: Save to user's personal rides collection with CORRECT ID
       await _firestore
           .collection('users')
           .doc(currentUser.uid)
@@ -140,7 +150,6 @@ class RideRequestService {
   }
 
   /// Update ride status (for terminal app)
-  /// Now accepts todaNumber instead of driverId/driverName
   static Future<bool> updateRideStatus(
     String rideId, 
     String terminalId, 
@@ -148,13 +157,20 @@ class RideRequestService {
     {String? driverId, String? driverName, String? todaNumber}
   ) async {
     try {
+      print('=== UPDATE RIDE STATUS ===');
+      print('Ride ID: $rideId');
+      print('Terminal ID: $terminalId');
+      print('Status: $status');
+      print('TODA Number: $todaNumber');
+
       final Map<String, dynamic> updateData = {
         'status': status.toString().split('.').last,
       };
 
-      // Add TODA number if provided
-      if (todaNumber != null) {
+      // Add TODA number if provided (check for both null and empty string)
+      if (todaNumber != null && todaNumber.isNotEmpty) {
         updateData['todaNumber'] = todaNumber;
+        print('Adding todaNumber to update: $todaNumber');
       }
 
       // Update status change timestamp
@@ -181,40 +197,71 @@ class RideRequestService {
           break;
       }
 
-      // Update in all collections
-      await Future.wait([
-        _firestore
-            .collection('terminals')
-            .doc(terminalId)
-            .collection('ride_requests')
-            .doc(rideId)
-            .update(updateData),
-        
-        _firestore
-            .collection('rides')
-            .doc(rideId)
-            .update(updateData),
-      ]);
+      print('Final update data: $updateData');
+
+      // First, verify the document exists in terminal collection
+      final terminalDocRef = _firestore
+          .collection('terminals')
+          .doc(terminalId)
+          .collection('ride_requests')
+          .doc(rideId);
+      
+      final terminalDoc = await terminalDocRef.get();
+      if (!terminalDoc.exists) {
+        print('ERROR: Document does not exist in terminal collection!');
+        print('Path: terminals/$terminalId/ride_requests/$rideId');
+        return false;
+      }
+
+      print('Document exists in terminal collection');
+      print('Current status in DB: ${terminalDoc.data()?['status']}');
+
+      // Update terminal collection
+      print('Updating terminal collection...');
+      await terminalDocRef.update(updateData);
+      print('Terminal collection updated');
+
+      // Verify the update worked
+      final verifyDoc = await terminalDocRef.get();
+      print('Verified new status: ${verifyDoc.data()?['status']}');
+
+      // Update global rides collection
+      print('Updating rides collection...');
+      await _firestore
+          .collection('rides')
+          .doc(rideId)
+          .update(updateData);
+      print('Rides collection updated');
       
       // Also update in user's rides collection
+      print('Getting user ID from ride...');
       final rideDoc = await _firestore.collection('rides').doc(rideId).get();
       if (rideDoc.exists) {
         final rideData = rideDoc.data();
         final userId = rideData?['userId'];
+        print('User ID: $userId');
+        
         if (userId != null) {
+          print('Updating user rides collection...');
           await _firestore
               .collection('users')
               .doc(userId)
               .collection('rides')
               .doc(rideId)
               .update(updateData);
+          print('User rides collection updated');
         }
       }
       
-      print('Ride status updated to: $status');
+      print('Ride status updated successfully to: $status');
       return true;
     } catch (e) {
-      print('Error updating ride status: $e');
+      print('❌ ERROR updating ride status: $e');
+      print('Error type: ${e.runtimeType}');
+      if (e is FirebaseException) {
+        print('Firebase error code: ${e.code}');
+        print('Firebase error message: ${e.message}');
+      }
       return false;
     }
   }
@@ -258,7 +305,7 @@ class RideRequest {
   final int durationInSeconds;
   
   // Additional fields for tracking
-  final String? todaNumber; // Changed from driverId/driverName
+  final String? todaNumber;
   final DateTime? acceptedTime;
   final DateTime? enRouteTime;
   final DateTime? arrivedTime;
