@@ -180,17 +180,11 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
           actions: [
             TextButton(
               onPressed: () {
-                // Close the success dialog first
-                Navigator.of(context).pop();
-
-                // If parent provided a callback, call it. Parent will handle closing
-                // the bottom sheet and starting cooldown.
-                if (widget.onRequestConfirmed != null) {
-                  widget.onRequestConfirmed!();
-                } else {
-                  // Fallback: close the bottom sheet and return the rideRequest
-                  Navigator.of(context).pop(rideRequest);
-                }
+                // Close the success dialog AND return the rideRequest to parent
+                Navigator.of(context).pop(); // Close dialog
+                
+                // Return the ride request to the parent (HomePage)
+                Navigator.of(context).pop(rideRequest); // Close bottom sheet with result
               },
               style: TextButton.styleFrom(
                 backgroundColor: const Color(0xFF0097B2),

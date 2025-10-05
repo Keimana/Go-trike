@@ -116,66 +116,110 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                           return CardBuilderPassengerTerminal(
                             rideRequest: rideRequest,
                             onAccept: () async {
+                              print('Accept button pressed for ride: ${rideRequest.id}');
+                              
+                              // Store context references BEFORE any await
+                              final navigator = Navigator.of(context);
+                              final scaffoldMessenger = ScaffoldMessenger.of(context);
+                              
                               // Show TODA Number modal to get input
                               final todaNumber = await showDialog<String>(
                                 context: context,
-                                builder: (context) =>
+                                builder: (dialogContext) =>
                                     const TerminalModalAccept(),
                               );
 
+                              print('TODA number entered: $todaNumber');
+
                               // If TODA number entered, accept the ride
-                              if (todaNumber != null && todaNumber.isNotEmpty && mounted) {
-                                // Show loading dialog
-                                showDialog(
-                                  context: context,
-                                  barrierDismissible: false,
-                                  builder: (context) => const Center(
-                                    child: CircularProgressIndicator(),
+                              if (todaNumber != null && todaNumber.isNotEmpty) {
+                                // Check if still mounted
+                                if (!mounted) return;
+                                
+                                // Show loading dialog using stored navigator
+                                navigator.push(
+                                  PageRouteBuilder(
+                                    opaque: false,
+                                    barrierDismissible: false,
+                                    pageBuilder: (_, __, ___) => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
                                   ),
                                 );
 
+                                print('Attempting to update ride status...');
+                                print('Ride ID: ${rideRequest.id}');
+                                print('Terminal ID: ${widget.terminalId}');
+                                print('TODA Number: $todaNumber');
+
                                 // Accept the ride with TODA number
-                                final success = await RideRequestService
-                                    .updateRideStatus(
-                                  rideRequest.id,
-                                  widget.terminalId,
-                                  RideStatus.accepted,
-                                  todaNumber: todaNumber,
-                                );
-
-                                // Close loading dialog
-                                if (mounted) {
-                                  Navigator.of(context).pop();
-                                }
-
-                                if (success && mounted) {
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                          'Ride accepted by TODA #$todaNumber'),
-                                      backgroundColor: Colors.green,
-                                    ),
+                                try {
+                                  final success = await RideRequestService
+                                      .updateRideStatus(
+                                    rideRequest.id,
+                                    widget.terminalId,
+                                    RideStatus.accepted,
+                                    todaNumber: todaNumber,
                                   );
-                                } else if (mounted) {
-                                  ScaffoldMessenger.of(context)
-                                      .showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
-                                          'Failed to accept ride request'),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
+
+                                  print('Update result: $success');
+
+                                  // Close loading dialog
+                                  if (mounted) {
+                                    navigator.pop();
+                                  }
+
+                                  if (success && mounted) {
+                                    scaffoldMessenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                            'Ride accepted by TODA #$todaNumber'),
+                                        backgroundColor: Colors.green,
+                                      ),
+                                    );
+                                  } else if (mounted) {
+                                    scaffoldMessenger.showSnackBar(
+                                      const SnackBar(
+                                        content: Text(
+                                            'Failed to accept ride request'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  print('Error accepting ride: $e');
+                                  
+                                  // Close loading dialog
+                                  if (mounted) {
+                                    navigator.pop();
+                                  }
+                                  
+                                  if (mounted) {
+                                    scaffoldMessenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text('Error: $e'),
+                                        backgroundColor: Colors.red,
+                                      ),
+                                    );
+                                  }
                                 }
                               }
                             },
                             onCancel: () async {
+                              print('Cancel button pressed for ride: ${rideRequest.id}');
+                              
+                              // Store context references BEFORE any await
+                              final navigator = Navigator.of(context);
+                              final scaffoldMessenger = ScaffoldMessenger.of(context);
+                              
                               // Show loading dialog
-                              showDialog(
-                                context: context,
-                                barrierDismissible: false,
-                                builder: (context) => const Center(
-                                  child: CircularProgressIndicator(),
+                              navigator.push(
+                                PageRouteBuilder(
+                                  opaque: false,
+                                  barrierDismissible: false,
+                                  pageBuilder: (_, __, ___) => const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
                                 ),
                               );
 
@@ -187,14 +231,15 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                                 RideStatus.cancelled,
                               );
 
+                              print('Cancel result: $success');
+
                               // Close loading dialog
                               if (mounted) {
-                                Navigator.of(context).pop();
+                                navigator.pop();
                               }
 
                               if (success && mounted) {
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(
+                                scaffoldMessenger.showSnackBar(
                                   const SnackBar(
                                     content:
                                         Text('Ride request cancelled'),
@@ -202,8 +247,7 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                                   ),
                                 );
                               } else if (mounted) {
-                                ScaffoldMessenger.of(context)
-                                    .showSnackBar(
+                                scaffoldMessenger.showSnackBar(
                                   const SnackBar(
                                     content: Text(
                                         'Failed to cancel ride request'),

@@ -10,6 +10,8 @@ import 'account_settings_screen.dart';
 import 'request_trike.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'settings_screen.dart';
+import '../services/ride_request_service.dart';
+import '../widgets/user_modal_accept.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -66,6 +68,11 @@ class _MainScreenContentState extends State<MainScreenContent> {
   int _cooldownSeconds = 0;
   Timer? _cooldownTimer;
 
+  // Ride status listener variables
+  StreamSubscription<RideRequest?>? _rideStatusSubscription;
+  String? _activeRideId;
+  bool _hasShownAcceptedModal = false;
+
   @override
   void initState() {
     super.initState();
@@ -77,8 +84,48 @@ class _MainScreenContentState extends State<MainScreenContent> {
   @override
   void dispose() {
     _cooldownTimer?.cancel();
+    _rideStatusSubscription?.cancel();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  /// Start listening to ride status
+  void _startListeningToRideStatus(String rideId) {
+    print('Started listening to ride: $rideId');
+    _activeRideId = rideId;
+    _hasShownAcceptedModal = false;
+    
+    // Cancel previous subscription if any
+    _rideStatusSubscription?.cancel();
+    
+    // Start new subscription
+    _rideStatusSubscription = RideRequestService.listenToRideStatus(rideId)
+        .listen((rideRequest) {
+      print('Ride status update received');
+      print('Status: ${rideRequest?.status}');
+      print('TODA Number: ${rideRequest?.todaNumber}');
+      
+      if (rideRequest == null || !mounted) return;
+
+      // Check if ride was accepted and modal hasn't been shown yet
+      if (rideRequest.status == RideStatus.accepted && 
+          !_hasShownAcceptedModal) {
+        _hasShownAcceptedModal = true;
+        
+        // Get the TODA number
+        final todaNumber = rideRequest.todaNumber ?? 'N/A';
+        
+        print('Showing driver modal with TODA: $todaNumber');
+        
+        // Show the "Driver is on your way" modal
+        showDriverOnWayModal(context, todaNumber);
+        
+        // Stop listening after showing modal
+        _rideStatusSubscription?.cancel();
+      }
+    }, onError: (error) {
+      print('Error listening to ride status: $error');
+    });
   }
 
   /// Start cooldown (5 minutes = 300 seconds)
@@ -469,7 +516,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
           position: _selectedLocation!,
           icon: _pickupIcon ?? BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen),
           infoWindow: InfoWindow(
-            title: "📍 Your Pickup Location",
+            title: "Your Pickup Location",
             snippet: "Lat: ${_selectedLocation!.latitude.toStringAsFixed(4)}, Lng: ${_selectedLocation!.longitude.toStringAsFixed(4)}",
           ),
           onTap: () {
@@ -530,7 +577,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
       return;
     }
 
-    showModalBottomSheet(
+    final result = await showModalBottomSheet<RideRequest?>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -549,12 +596,8 @@ class _MainScreenContentState extends State<MainScreenContent> {
               child: RequestTrikePage(
                 userLocation: requestLocation,
                 userAddress: _getAddressText(),
-                // Callback used by RequestTrikePage when OK is pressed in success dialog:
                 onRequestConfirmed: () {
-                  // This callback runs after the success dialog's OK has closed the dialog.
-                  // Close the bottom sheet and start cooldown.
-                  Navigator.of(context).pop(); // Close bottom sheet
-                  _startCooldown();
+                  Navigator.of(context).pop(); // This will close and return null
                 },
               ),
             );
@@ -562,6 +605,17 @@ class _MainScreenContentState extends State<MainScreenContent> {
         );
       },
     );
+
+    // Check if a ride was submitted (RequestTrikePage returns the RideRequest)
+    if (result != null && result is RideRequest) {
+      print('Ride request submitted with ID: ${result.id}');
+      
+      // Start listening to this ride's status
+      _startListeningToRideStatus(result.id);
+      
+      // Start cooldown
+      _startCooldown();
+    }
   }
 
   @override
