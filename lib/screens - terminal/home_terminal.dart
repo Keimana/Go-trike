@@ -27,7 +27,6 @@ class _TerminalHomeState extends State<TerminalHome> {
   late GoogleMapController _mapController;
   final Set<Marker> _markers = {};
 
-  /// 🖼️ Resize and load a custom marker (same as homepage)
   Future<BitmapDescriptor> _getResizedMarker(String path, int targetWidth) async {
     final ByteData data = await rootBundle.load(path);
     final ui.Codec codec = await ui.instantiateImageCodec(
@@ -40,7 +39,6 @@ class _TerminalHomeState extends State<TerminalHome> {
     return BitmapDescriptor.fromBytes(resizedData);
   }
 
-  /// 🗺️ Add terminal markers (resized properly)
   void _updateMarkers() async {
     final List<LatLng> terminalLocations = [
       const LatLng(15.116888, 120.615710),
@@ -50,27 +48,26 @@ class _TerminalHomeState extends State<TerminalHome> {
       const LatLng(15.115900, 120.616000),
     ];
 
-    // ✅ Smaller marker, same as homepage
     final BitmapDescriptor terminalIcon = await _getResizedMarker(
       'assets/icons/terminal.png',
-      120, // 🔧 adjust this value if still too big (try 60 or 50)
+      120,
     );
 
-    final Set<Marker> newMarkers = terminalLocations.asMap().entries.map((entry) {
-      int index = entry.key;
-      LatLng position = entry.value;
-      return Marker(
-        markerId: MarkerId('terminal_$index'),
-        position: position,
-        icon: terminalIcon,
-        infoWindow: InfoWindow(title: 'Terminal ${index + 1}'),
-      );
-    }).toSet();
-
     setState(() {
-      _markers
-        ..clear()
-        ..addAll(newMarkers);
+      _markers.clear();
+      for (int i = 0; i < terminalLocations.length; i++) {
+        _markers.add(
+          Marker(
+            markerId: MarkerId('terminal_${i + 1}'),
+            position: terminalLocations[i],
+            icon: terminalIcon,
+            infoWindow: InfoWindow(
+              title: "Tricycle Terminal ${i + 1}",
+              snippet: "Telabastagan",
+            ),
+          ),
+        );
+      }
     });
   }
 
@@ -86,7 +83,7 @@ class _TerminalHomeState extends State<TerminalHome> {
   @override
   void initState() {
     super.initState();
-    _updateMarkers(); // 👈 Initialize markers
+    _updateMarkers();
   }
 
   @override
@@ -100,10 +97,9 @@ class _TerminalHomeState extends State<TerminalHome> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          /// 🌍 Fullscreen Google Map
           GoogleMap(
             initialCameraPosition: const CameraPosition(
-              target: LatLng(15.116888, 120.615710), // Telabastagan
+              target: LatLng(15.116888, 120.615710),
               zoom: 16.0,
             ),
             onMapCreated: (GoogleMapController controller) {
@@ -114,10 +110,9 @@ class _TerminalHomeState extends State<TerminalHome> {
             cameraTargetBounds: CameraTargetBounds(telabastaganBounds),
             minMaxZoomPreference: const MinMaxZoomPreference(16, 20),
             zoomControlsEnabled: true,
-            markers: _markers, // ✅ show terminal markers
+            markers: _markers,
           ),
 
-          /// 🧱 Overlay UI
           SafeArea(
             child: Column(
               children: [
