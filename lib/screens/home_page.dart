@@ -89,6 +89,81 @@ class _MainScreenContentState extends State<MainScreenContent> {
     super.dispose();
   }
 
+  /// Show cancellation notification
+  void _showRideCancelledDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.cancel, color: Colors.red, size: 28),
+            SizedBox(width: 12),
+            Text(
+              'Ride Cancelled',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Your ride request has been cancelled.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'You can request another ride when you\'re ready.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Clear the cooldown when ride is cancelled
+              setState(() {
+                _isCooldown = false;
+                _cooldownSeconds = 0;
+              });
+              _cooldownTimer?.cancel();
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF0097B2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'OK',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Start listening to ride status
   void _startListeningToRideStatus(String rideId) {
     print('Started listening to ride: $rideId');
@@ -106,6 +181,18 @@ class _MainScreenContentState extends State<MainScreenContent> {
       print('TODA Number: ${rideRequest?.todaNumber}');
       
       if (rideRequest == null || !mounted) return;
+
+      // Check if ride was cancelled
+      if (rideRequest.status == RideStatus.cancelled) {
+        print('Ride was cancelled');
+        
+        // Show cancellation dialog
+        _showRideCancelledDialog();
+        
+        // Stop listening after showing dialog
+        _rideStatusSubscription?.cancel();
+        return;
+      }
 
       // Check if ride was accepted and modal hasn't been shown yet
       if (rideRequest.status == RideStatus.accepted && 
