@@ -45,98 +45,141 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
               children: [
                 TableRow(
                   children: [
-                    const Text(
-                      "Name:",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        "Name:",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(rideRequest.userName),
+                      child: Text(
+                        rideRequest.userName,
+                        style: const TextStyle(fontSize: 14),
+                      ),
                     ),
                   ],
                 ),
                 TableRow(
                   children: [
-                    const Text(
-                      "Fare:",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        "Fare:",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text('₱${rideRequest.fareAmount.toStringAsFixed(2)}'),
+                      child: Text(
+                        '₱${rideRequest.fareAmount.toStringAsFixed(2)}',
+                        style: const TextStyle(fontSize: 14),
+                      ),
                     ),
                   ],
                 ),
                 TableRow(
                   children: [
-                    const Text(
-                      "Payment:",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        "Payment:",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(rideRequest.paymentMethod),
+                      child: Text(
+                        rideRequest.paymentMethod,
+                        style: const TextStyle(fontSize: 14),
+                      ),
                     ),
                   ],
                 ),
                 TableRow(
                   children: [
-                    const Text(
-                      "Address:",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(rideRequest.userAddress),
-                    ),
-                  ],
-                ),
-                TableRow(
-                  children: [
-                    const Text(
-                      "Pickup:",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.green,
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        "Address:",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
                         rideRequest.userAddress,
-                        style: const TextStyle(color: Colors.green),
+                        style: const TextStyle(fontSize: 14),
                       ),
                     ),
                   ],
                 ),
                 TableRow(
                   children: [
-                    const Text(
-                      "Drop-off:",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: Colors.blue,
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        "Pickup:",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.green,
+                        ),
                       ),
                     ),
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        "Not Selected",
-                        style: TextStyle(color: Colors.grey[600]),
+                        rideRequest.userAddress,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Colors.green,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                TableRow(
+                  children: [
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        "Drop-off:",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4),
+                      child: Text(
+                        rideRequest.destinationAddress.isNotEmpty 
+                            ? rideRequest.destinationAddress 
+                            : "No data",
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: rideRequest.destinationAddress.isNotEmpty 
+                              ? Colors.blue 
+                              : Colors.grey[600],
+                          fontStyle: rideRequest.destinationAddress.isNotEmpty 
+                              ? FontStyle.normal 
+                              : FontStyle.italic,
+                        ),
                       ),
                     ),
                   ],
@@ -144,6 +187,8 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
               ],
             ),
           ),
+
+          const SizedBox(width: 16),
 
           // Action Buttons (Accept + Cancel)
           Column(
