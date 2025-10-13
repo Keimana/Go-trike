@@ -4,13 +4,14 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // ADD THIS IMPORT
 import 'package:http/http.dart' as http;
 import 'distance_matrix_service.dart';
 
 class RideRequestService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const int TERMINAL_TIMEOUT_SECONDS = 60; // 1 minute timeout per terminal
-  static const String _apiKey = 'AIzaSyBQCU2TstYBQAhbnhaZ_IWsZzashpBbQk4';
+  static const int TERMINAL_TIMEOUT_SECONDS = 30; // 1 minute timeout per terminal
+  static final String _apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api/distancematrix/json';
 
   /// Submit ride request with cascading terminal assignment
@@ -252,7 +253,7 @@ class RideRequestService {
         final rideData = rideDoc.data()!;
         final status = rideData['status'];
         
-        // If accepted or completed, stop cascading
+        // If accepted, completed, cancelled, or no_driver_available, stop cascading
         if (status != 'pending') {
           print('Ride $rideId status is $status, stopping cascade');
           timer.cancel();
@@ -266,6 +267,11 @@ class RideRequestService {
           // All terminals exhausted - mark as no driver available
           print('All terminals exhausted for ride $rideId');
           
+          // Remove from last terminal FIRST
+          final lastTerminalId = sortedTerminals[currentIndex - 1].terminal.id;
+          await _removeFromTerminal(rideId, lastTerminalId);
+          
+          // Then update status to no_driver_available
           await _firestore.collection('rides').doc(rideId).update({
             'status': 'no_driver_available',
             'noDriverTime': Timestamp.now(),
@@ -282,11 +288,8 @@ class RideRequestService {
             'status': 'no_driver_available',
             'noDriverTime': Timestamp.now(),
           });
-
-          // Remove from last terminal
-          final lastTerminalId = sortedTerminals[currentIndex - 1].terminal.id;
-          await _removeFromTerminal(rideId, lastTerminalId);
           
+          print('Ride marked as no_driver_available');
           timer.cancel();
           return;
         }

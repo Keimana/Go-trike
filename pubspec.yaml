@@ -30,6 +30,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_dotenv: ^5.1.0
   flutter_svg: ^2.0.9
   google_maps_flutter: ^2.6.1
   location: ^5.0.3
@@ -107,6 +108,7 @@ flutter:
     - assets/icons/terminal.png
     - assets/icons/fullscreen.svg
     - assets/icons/person_search.svg
+    - .env
   fonts:
     - family: Roboto
       fonts:

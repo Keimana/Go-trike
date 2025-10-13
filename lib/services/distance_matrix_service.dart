@@ -2,9 +2,10 @@ import 'dart:convert';
 import 'dart:math'; // Add this import for mathematical functions
 import 'package:http/http.dart' as http;
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; //
 
 class DistanceMatrixService {
-  static const String _apiKey = 'AIzaSyBQCU2TstYBQAhbnhaZ_IWsZzashpBbQk4'; // Replace with your API key
+  static final String _apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api/distancematrix/json';
 
   // Terminal data structure

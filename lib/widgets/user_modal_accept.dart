@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../screens/home_page.dart';
 
 void showDriverOnWayModal(BuildContext context, String todaNumber) {
   showDialog(
@@ -103,16 +102,10 @@ void showDriverOnWayModal(BuildContext context, String todaNumber) {
 
               const SizedBox(height: 28),
 
-              // Button
+              // Button - FIXED: Just pop the dialog, don't replace the page
               GestureDetector(
                 onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const HomePage(),
-                    ),
-                  );
+                  Navigator.of(context).pop();
                 },
                 child: Container(
                   width: 150,

@@ -13,6 +13,7 @@ import 'settings_screen.dart';
 import '../services/ride_request_service.dart';
 import '../widgets/user_modal_accept.dart';
 
+
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
@@ -63,14 +64,12 @@ class _MainScreenContentState extends State<MainScreenContent> {
   BitmapDescriptor? _terminalIcon;
   BitmapDescriptor? _pickupIcon;
 
-  // Cooldown variables
-  bool _isCooldown = false;
-  int _cooldownSeconds = 0;
-  Timer? _cooldownTimer;
+  // Pending ride tracking
+  bool _hasPendingRide = false;
+  String? _activeRideId;
 
   // Ride status listener variables
   StreamSubscription<RideRequest?>? _rideStatusSubscription;
-  String? _activeRideId;
   bool _hasShownAcceptedModal = false;
 
   @override
@@ -79,14 +78,48 @@ class _MainScreenContentState extends State<MainScreenContent> {
     _loadCustomMarkers();
     _loadTerminalMarkers();
     _getCurrentLocation();
+    _checkForPendingRides();
   }
 
   @override
   void dispose() {
-    _cooldownTimer?.cancel();
     _rideStatusSubscription?.cancel();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  /// Check if user has any pending rides
+  Future<void> _checkForPendingRides() async {
+    try {
+      final userRidesStream = RideRequestService.listenToUserRides();
+      
+      userRidesStream.listen((rides) {
+        if (!mounted) return;
+        
+        // Check if there's any pending ride
+        final pendingRide = rides.firstWhere(
+          (ride) => ride.status == RideStatus.pending,
+          orElse: () => rides.first, // Fallback
+        );
+        
+        final hasPending = rides.any((ride) => ride.status == RideStatus.pending);
+        
+        setState(() {
+          _hasPendingRide = hasPending;
+          if (hasPending) {
+            _activeRideId = pendingRide.id;
+            // Start listening to this ride if not already
+            if (_rideStatusSubscription == null) {
+              _startListeningToRideStatus(pendingRide.id);
+            }
+          } else {
+            _activeRideId = null;
+          }
+        });
+      });
+    } catch (e) {
+      print('Error checking for pending rides: $e');
+    }
   }
 
   /// Show cancellation notification
@@ -136,12 +169,11 @@ class _MainScreenContentState extends State<MainScreenContent> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              // Clear the cooldown when ride is cancelled
+              // Clear pending ride status
               setState(() {
-                _isCooldown = false;
-                _cooldownSeconds = 0;
+                _hasPendingRide = false;
+                _activeRideId = null;
               });
-              _cooldownTimer?.cancel();
             },
             style: TextButton.styleFrom(
               backgroundColor: const Color(0xFF0097B2),
@@ -182,15 +214,47 @@ class _MainScreenContentState extends State<MainScreenContent> {
       
       if (rideRequest == null || !mounted) return;
 
-      // Check if ride was cancelled
+      // Update pending status based on ride status
+      final isPending = rideRequest.status == RideStatus.pending;
+      if (_hasPendingRide != isPending) {
+        setState(() {
+          _hasPendingRide = isPending;
+        });
+      }
+
+      // Check if no driver available (FIRST - highest priority)
+      if (rideRequest.status == RideStatus.noDriverAvailable) {
+        print('No driver available');
+        
+        setState(() {
+          _hasPendingRide = false;
+          _activeRideId = null;
+        });
+        
+        _showNoDriverAvailableDialog();
+        
+        _rideStatusSubscription?.cancel();
+        _rideStatusSubscription = null;
+        return;
+      }
+
+      // Check if ride was cancelled (only show if it's a manual cancellation, not from cascade)
       if (rideRequest.status == RideStatus.cancelled) {
         print('Ride was cancelled');
         
-        // Show cancellation dialog
+        // Clear pending status
+        setState(() {
+          _hasPendingRide = false;
+          _activeRideId = null;
+        });
+        
+        // Only show cancellation dialog if it wasn't already handled as noDriverAvailable
+        // This prevents showing "cancelled" after cascade exhaustion
         _showRideCancelledDialog();
         
         // Stop listening after showing dialog
         _rideStatusSubscription?.cancel();
+        _rideStatusSubscription = null;
         return;
       }
 
@@ -198,6 +262,12 @@ class _MainScreenContentState extends State<MainScreenContent> {
       if (rideRequest.status == RideStatus.accepted && 
           !_hasShownAcceptedModal) {
         _hasShownAcceptedModal = true;
+        
+        // Clear pending status
+        setState(() {
+          _hasPendingRide = false;
+          _activeRideId = null;
+        });
         
         // Get the TODA number
         final todaNumber = rideRequest.todaNumber ?? 'N/A';
@@ -209,33 +279,80 @@ class _MainScreenContentState extends State<MainScreenContent> {
         
         // Stop listening after showing modal
         _rideStatusSubscription?.cancel();
+        _rideStatusSubscription = null;
       }
     }, onError: (error) {
       print('Error listening to ride status: $error');
     });
   }
 
-  /// Start cooldown (5 minutes = 300 seconds)
-  void _startCooldown() {
-    setState(() {
-      _isCooldown = true;
-      _cooldownSeconds = 300;
-    });
-
-    _cooldownTimer?.cancel();
-    _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_cooldownSeconds <= 1) {
-        timer.cancel();
-        setState(() {
-          _isCooldown = false;
-          _cooldownSeconds = 0;
-        });
-      } else {
-        setState(() {
-          _cooldownSeconds--;
-        });
-      }
-    });
+  /// Show dialog when no driver is available
+  void _showNoDriverAvailableDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange, size: 28),
+            SizedBox(width: 12),
+            Text(
+              'No Driver Available',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Sorry, no drivers are available at the moment.',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.black87,
+              ),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'Please try again later.',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF0097B2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'OK',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   /// Load custom markers for terminals and pickup location
@@ -656,10 +773,25 @@ class _MainScreenContentState extends State<MainScreenContent> {
   }
 
   Future<void> _handleRideRequest() async {
+    // Check if there's already a pending ride
+    if (_hasPendingRide) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You already have a pending ride request'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
+
     final requestLocation = _getLocationForRequest();
     if (requestLocation == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a pickup location first'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Please select a pickup location first'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
@@ -684,7 +816,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
                 userLocation: requestLocation,
                 userAddress: _getAddressText(),
                 onRequestConfirmed: () {
-                  Navigator.of(context).pop(); // This will close and return null
+                  Navigator.of(context).pop();
                 },
               ),
             );
@@ -697,11 +829,14 @@ class _MainScreenContentState extends State<MainScreenContent> {
     if (result != null && result is RideRequest) {
       print('Ride request submitted with ID: ${result.id}');
       
+      // Set pending ride status
+      setState(() {
+        _hasPendingRide = true;
+        _activeRideId = result.id;
+      });
+      
       // Start listening to this ride's status
       _startListeningToRideStatus(result.id);
-      
-      // Start cooldown
-      _startCooldown();
     }
   }
 
@@ -765,7 +900,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
                       _useCurrentLocation = true;
                       _isPickingLocation = false;
                     });
-                    _updateMarkers(); // Refresh markers
+                    _updateMarkers();
                     _getCurrentLocation();
                   },
                   child: Container(
@@ -853,26 +988,24 @@ class _MainScreenContentState extends State<MainScreenContent> {
             ),
           ),
 
-        /// Request Trike Button (with cooldown)
+        /// Request Trike Button (disabled if pending ride exists)
         Positioned(
           bottom: h * 0.15,
           left: (w - buttonWidth) / 2,
           child: GestureDetector(
-            onTap: _isCooldown ? null : _handleRideRequest,
+            onTap: _hasPendingRide ? null : _handleRideRequest,
             child: Container(
               width: buttonWidth,
               height: buttonHeight,
               decoration: ShapeDecoration(
-                color: _isCooldown ? Colors.grey : const Color(0xFF0097B2),
+                color: _hasPendingRide ? Colors.grey : const Color(0xFF0097B2),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(20),
                 ),
               ),
               alignment: Alignment.center,
               child: Text(
-                _isCooldown
-                    ? "(${(_cooldownSeconds ~/ 60).toString().padLeft(2, '0')}:${(_cooldownSeconds % 60).toString().padLeft(2, '0')})"
-                    : "Request Trike",
+                _hasPendingRide ? "Pending Request..." : "Request Trike",
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 20,

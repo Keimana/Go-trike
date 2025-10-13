@@ -58,6 +58,11 @@ android {
 
         // ✅ Prevent dexing issues when using Firebase
         multiDexEnabled true
+        
+        // Set manifest placeholder
+        manifestPlaceholders = [
+            GOOGLE_MAPS_API_KEY: localProperties.getProperty('GOOGLE_MAPS_API_KEY', '')
+        ]
     }
 
     buildTypes {

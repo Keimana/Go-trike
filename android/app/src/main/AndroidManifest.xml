@@ -2,12 +2,11 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <application
         android:label="demo_app"
-        android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
 
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBQCU2TstYBQAhbnhaZ_IWsZzashpBbQk4"/>
+            android:value="${GOOGLE_MAPS_API_KEY}"/>
 
         <activity
             android:name=".MainActivity"

@@ -10,6 +10,7 @@
 .svn/
 migrate_working_dir/
 pubspec.lock
+
 # IntelliJ related
 *.iml
 *.ipr
@@ -41,3 +42,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Environment variables and API keys
+.env
+.env.local
+.env.*.local
+config.json
+secrets.json
+
+# Google Services (if you have these files with sensitive data)
+google-services.json
+GoogleService-Info.plist

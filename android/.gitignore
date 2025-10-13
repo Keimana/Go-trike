@@ -11,3 +11,6 @@ GeneratedPluginRegistrant.java
 key.properties
 **/*.keystore
 **/*.jks
+
+**/android/local.properties
+**/ios/Flutter/flutter_export_environment.sh
