@@ -7,6 +7,8 @@ import '../services/ride_request_service.dart';
 class RequestTrikePage extends StatefulWidget {
   final LatLng userLocation;
   final String userAddress;
+  final LatLng? destinationLocation;  // NEW: Destination coordinates
+  final String? destinationAddress;   // NEW: Destination address text
 
   /// Optional callback the parent can provide. Called after the user taps OK
   /// in the success dialog. Useful to start cooldown or close the bottom sheet.
@@ -16,6 +18,8 @@ class RequestTrikePage extends StatefulWidget {
     super.key,
     required this.userLocation,
     required this.userAddress,
+    this.destinationLocation,
+    this.destinationAddress,
     this.onRequestConfirmed,
   });
 
@@ -27,7 +31,6 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
   String _selectedPaymentMethod = 'Cash';
   bool _isSubmitting = false;
   String _userName = "User";
-  String _destinationLocation = "Not Selected";
 
   @override
   void initState() {
@@ -49,18 +52,59 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
     }
   }
 
+  /// Calculate estimated distance between pickup and destination (in km)
+  double _calculateDistance() {
+    if (widget.destinationLocation == null) return 0.0;
+    
+    // Simple distance calculation (Haversine formula would be more accurate)
+    final lat1 = widget.userLocation.latitude;
+    final lon1 = widget.userLocation.longitude;
+    final lat2 = widget.destinationLocation!.latitude;
+    final lon2 = widget.destinationLocation!.longitude;
+    
+    final dLat = (lat2 - lat1) * 111.32; // degrees to km (approximate)
+    final dLon = (lon2 - lon1) * 111.32 * 0.9962; // adjust for latitude
+    
+    final distance = (dLat * dLat + dLon * dLon);
+    return distance > 0 ? distance : 0.1; // minimum 100m
+  }
+
+  /// Calculate estimated fare based on distance
+  double _calculateFare() {
+    if (widget.destinationLocation == null) return 0.0;
+    
+    final distance = _calculateDistance();
+    
+    // Basic fare structure
+    const double baseFare = 15.0; // 
+    const double perKmRate = 10.0; // Rate per km
+    
+    final fare = baseFare + (distance * perKmRate);
+    return fare;
+  }
+
   Future<void> _submitRideRequest() async {
+    // Validate destination
+    if (widget.destinationLocation == null) {
+      _showErrorSnackBar('Please select a destination first');
+      return;
+    }
+
     setState(() {
       _isSubmitting = true;
     });
 
     try {
+      final fare = _calculateFare();
+      
       final RideRequest? rideRequest =
           await RideRequestService.submitRideRequest(
         userLocation: widget.userLocation,
         userName: _userName,
         userAddress: widget.userAddress,
-        fareAmount: 0,
+        destinationLocation: widget.destinationLocation!, // Pass destination
+        destinationAddress: widget.destinationAddress ?? "Selected Destination",
+        fareAmount: fare,
         paymentMethod: _selectedPaymentMethod,
       );
 
@@ -92,86 +136,52 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
       barrierDismissible: false,
       builder: (context) {
         return AlertDialog(
-          title: const Text('Ride Request Submitted!'),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green, size: 28),
+              SizedBox(width: 12),
+              Text('Ride Request Submitted!'),
+            ],
+          ),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Table(
-                  columnWidths: const {
-                    0: FlexColumnWidth(2),
-                    1: FlexColumnWidth(3),
-                  },
-                  defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-                  children: [
-                    TableRow(
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text('Req ID:'),
+                _buildInfoRow('Request ID', rideRequest.id, Icons.tag),
+                const SizedBox(height: 12),
+                _buildInfoRow('Terminal', rideRequest.assignedTerminal.name, Icons.local_taxi),
+                const SizedBox(height: 12),
+                _buildInfoRow('Distance', rideRequest.distance, Icons.straighten),
+                const SizedBox(height: 12),
+                _buildInfoRow('ETA', rideRequest.estimatedTime, Icons.access_time),
+                const SizedBox(height: 12),
+                _buildInfoRow('Fare', '₱${rideRequest.fareAmount.toStringAsFixed(2)}', Icons.payments),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Please wait for a tricycle driver to accept your request.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Text(rideRequest.id),
-                        ),
-                      ],
-                    ),
-                    TableRow(
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text('Assigned Terminal:'),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Text(rideRequest.assignedTerminal.name),
-                        ),
-                      ],
-                    ),
-                    TableRow(
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text('Distance:'),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Text(rideRequest.distance),
-                        ),
-                      ],
-                    ),
-                    TableRow(
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text('ETA:'),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Text(rideRequest.estimatedTime),
-                        ),
-                      ],
-                    ),
-                    TableRow(
-                      children: [
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 6),
-                          child: Text('Fare:'),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Text('₱${rideRequest.fareAmount.toStringAsFixed(2)}'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Please wait for a tricycle driver to accept your request.',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Color.fromARGB(255, 255, 94, 0),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -180,23 +190,22 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
           actions: [
             TextButton(
               onPressed: () {
-                // Close the success dialog AND return the rideRequest to parent
                 Navigator.of(context).pop(); // Close dialog
-                
-                // Return the ride request to the parent (HomePage)
                 Navigator.of(context).pop(rideRequest); // Close bottom sheet with result
               },
               style: TextButton.styleFrom(
                 backgroundColor: const Color(0xFF0097B2),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
               ),
               child: const Text(
                 'OK',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w600,
+                  fontSize: 16,
                 ),
               ),
             ),
@@ -206,14 +215,50 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
     );
   }
 
+  Widget _buildInfoRow(String label, String value, IconData icon) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: const Color(0xFF0097B2)),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
+    final hasDestination = widget.destinationLocation != null;
+    final estimatedFare = _calculateFare();
 
     return SingleChildScrollView(
       child: Padding(
         padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom, // keyboard safe
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,96 +268,230 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
             // Top center grabber
             Center(
               child: Container(
-                width: 40, // width of the bar
-                height: 4, // thickness
+                width: 40,
+                height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey[400], // grey color
+                  color: Colors.grey[400],
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-            // Pickup location
-            Text(
-              widget.userAddress,
-              style: const TextStyle(
+            // Title
+            const Text(
+              'Ride Details',
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
                 color: Color(0xFF323232),
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
               ),
             ),
             const SizedBox(height: 20),
 
-            // Destination picker
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    "Destination: $_destinationLocation",
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w500),
-                    overflow: TextOverflow.ellipsis,
+            // Pickup location card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.green.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.my_location, color: Colors.white, size: 20),
                   ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _destinationLocation = "Sample Destination"; // dito ka mag lagay ng entity for destination point (drop off location)
-                    });
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0097B2),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Pickup Location',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.userAddress,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: const Text(
-                    "Choose Location",
-                    style: TextStyle(color: Colors.white),
-                  ),
-                ),
-              ],
+                ],
+              ),
             ),
-            const SizedBox(height: 32),
+
+            const SizedBox(height: 12),
+
+            // Destination location card
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: hasDestination 
+                    ? Colors.red.withOpacity(0.05) 
+                    : Colors.grey.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: hasDestination 
+                      ? Colors.red.withOpacity(0.2) 
+                      : Colors.grey.withOpacity(0.2),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: hasDestination ? Colors.red : Colors.grey,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.location_on, color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Destination',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          widget.destinationAddress ?? 'No destination selected',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                            color: hasDestination ? Colors.black87 : Colors.grey[400],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (hasDestination)
+                    const Icon(Icons.check_circle, color: Colors.green, size: 20),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // Fare estimation
+            if (hasDestination)
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0097B2).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.payments, color: Color(0xFF0097B2), size: 24),
+                        SizedBox(width: 12),
+                        Text(
+                          'Estimated Fare',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: Color(0xFF323232),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Text(
+                      '₱${estimatedFare.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: Color(0xFF0097B2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+            const SizedBox(height: 24),
 
             // Payment method
             const Text(
               'Payment Method',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
 
-            GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedPaymentMethod = 'Cash';
-                });
-              },
-              child: Container(
-                width: screenWidth * 0.25,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: _selectedPaymentMethod == 'Cash'
-                      ? const Color(0xFF0097B2)
-                      : Colors.grey[200],
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Center(
-                  child: Text(
-                    'Cash',
-                    style: TextStyle(
-                      color: _selectedPaymentMethod == 'Cash'
-                          ? Colors.white
-                          : Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _selectedPaymentMethod = 'Cash';
+                      });
+                    },
+                    child: Container(
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: _selectedPaymentMethod == 'Cash'
+                            ? const Color(0xFF0097B2)
+                            : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _selectedPaymentMethod == 'Cash'
+                              ? const Color(0xFF0097B2)
+                              : Colors.grey[300]!,
+                          width: 2,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.money,
+                            color: _selectedPaymentMethod == 'Cash'
+                                ? Colors.white
+                                : Colors.black54,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Cash',
+                            style: TextStyle(
+                              color: _selectedPaymentMethod == 'Cash'
+                                  ? Colors.white
+                                  : Colors.black87,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
             const SizedBox(height: 32),
 
@@ -321,14 +500,23 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: _isSubmitting ? null : _submitRideRequest,
+                    onTap: _isSubmitting || !hasDestination ? null : _submitRideRequest,
                     child: Container(
                       height: 60,
                       decoration: BoxDecoration(
-                        color: _isSubmitting
+                        color: _isSubmitting || !hasDestination
                             ? Colors.grey
                             : const Color(0xFF0097B2),
                         borderRadius: BorderRadius.circular(30),
+                        boxShadow: !_isSubmitting && hasDestination
+                            ? [
+                                BoxShadow(
+                                  color: const Color(0xFF0097B2).withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Center(
                         child: _isSubmitting
@@ -340,9 +528,9 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text(
-                                'Request a Ride',
-                                style: TextStyle(
+                            : Text(
+                                hasDestination ? 'Request a Ride' : 'Select Destination',
+                                style: const TextStyle(
                                     color: Colors.white,
                                     fontSize: 16,
                                     fontWeight: FontWeight.w700),
@@ -363,7 +551,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
                         border: Border.all(
-                            color: const Color(0xFF0097B2), width: 1),
+                            color: const Color(0xFF0097B2), width: 2),
                       ),
                       child: const Center(
                         child: Text(
@@ -379,6 +567,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
           ],
         ),
       ),

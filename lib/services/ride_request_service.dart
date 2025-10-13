@@ -4,13 +4,13 @@ import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // ADD THIS IMPORT
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'distance_matrix_service.dart';
 
 class RideRequestService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const int TERMINAL_TIMEOUT_SECONDS = 30; // 1 minute timeout per terminal
+  static const int TERMINAL_TIMEOUT_SECONDS = 30;
   static final String _apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api/distancematrix/json';
 
@@ -19,6 +19,8 @@ class RideRequestService {
     required LatLng userLocation,
     required String userName,
     required String userAddress,
+    required LatLng destinationLocation,
+    required String destinationAddress,
     required double fareAmount,
     required String paymentMethod,
   }) async {
@@ -28,7 +30,6 @@ class RideRequestService {
         throw Exception('User not authenticated');
       }
 
-      // Step 1: Get all terminals sorted by distance
       print('Finding all terminals sorted by distance...');
       final List<TerminalAssignment> sortedTerminals = 
           await _getAllTerminalsSortedByDistance(userLocation);
@@ -37,7 +38,6 @@ class RideRequestService {
         throw Exception('No terminals available');
       }
 
-      // Step 2: Create initial ride request
       final String requestId = _firestore.collection('rides').doc().id;
       
       final RideRequest initialRequest = RideRequest(
@@ -46,6 +46,8 @@ class RideRequestService {
         userName: userName.isNotEmpty ? userName : (currentUser.displayName ?? 'User'),
         userLocation: userLocation,
         userAddress: userAddress,
+        destinationLocation: destinationLocation,
+        destinationAddress: destinationAddress,
         assignedTerminal: sortedTerminals[0].terminal,
         fareAmount: fareAmount,
         paymentMethod: paymentMethod,
@@ -58,13 +60,11 @@ class RideRequestService {
         sortedTerminalIds: sortedTerminals.map((t) => t.terminal.id).toList(),
       );
 
-      // Step 3: Save to global rides collection
       await _firestore
           .collection('rides')
           .doc(requestId)
           .set(initialRequest.toJson());
 
-      // Step 4: Save to user's personal rides collection
       await _firestore
           .collection('users')
           .doc(currentUser.uid)
@@ -72,10 +72,8 @@ class RideRequestService {
           .doc(requestId)
           .set(initialRequest.toJson());
 
-      // Step 5: Assign to first terminal
       await _assignToTerminal(initialRequest, sortedTerminals[0].terminal);
 
-      // Step 6: Start cascading timer
       _startCascadingTimer(requestId, sortedTerminals);
 
       print('Ride request submitted successfully with cascading enabled');
@@ -87,18 +85,15 @@ class RideRequestService {
     }
   }
 
-  /// Get all terminals sorted by distance from user location
   static Future<List<TerminalAssignment>> _getAllTerminalsSortedByDistance(
       LatLng userLocation) async {
     try {
       final List<Terminal> terminals = DistanceMatrixService.terminals;
       
-      // Build destinations string for all terminals
       final String destinations = terminals
           .map((terminal) => '${terminal.location.latitude},${terminal.location.longitude}')
           .join('|');
 
-      // Build API URL
       final String url = '$_baseUrl?'
           'origins=${userLocation.latitude},${userLocation.longitude}&'
           'destinations=$destinations&'
@@ -108,7 +103,6 @@ class RideRequestService {
           'traffic_model=best_guess&'
           'key=$_apiKey';
 
-      // Make API request
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
@@ -119,7 +113,6 @@ class RideRequestService {
         }
       }
       
-      // Fallback to Haversine if API fails
       return _getFallbackSortedTerminals(userLocation, terminals);
       
     } catch (e) {
@@ -128,7 +121,6 @@ class RideRequestService {
     }
   }
 
-  /// Process Distance Matrix API response for all terminals
   static List<TerminalAssignment> _processAllTerminalsResponse(
     Map<String, dynamic> data,
     LatLng userLocation,
@@ -153,13 +145,11 @@ class RideRequestService {
       }
     }
 
-    // Sort by duration (shortest first)
     assignments.sort((a, b) => a.durationInSeconds.compareTo(b.durationInSeconds));
     
     return assignments;
   }
 
-  /// Fallback sorting using Haversine distance
   static List<TerminalAssignment> _getFallbackSortedTerminals(
     LatLng userLocation,
     List<Terminal> terminals,
@@ -183,15 +173,13 @@ class RideRequestService {
       ));
     }
 
-    // Sort by distance (shortest first)
     assignments.sort((a, b) => a.durationInSeconds.compareTo(b.durationInSeconds));
     
     return assignments;
   }
 
-  /// Calculate distance using Haversine formula
   static double _calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
-    const double earthRadius = 6371; // Earth radius in kilometers
+    const double earthRadius = 6371;
     final double dLat = _degreesToRadians(lat2 - lat1);
     final double dLon = _degreesToRadians(lon2 - lon1);
 
@@ -208,7 +196,6 @@ class RideRequestService {
     return degrees * (pi / 180);
   }
 
-  /// Assign ride to a specific terminal
   static Future<void> _assignToTerminal(RideRequest request, Terminal terminal) async {
     await _firestore
         .collection('terminals')
@@ -220,7 +207,6 @@ class RideRequestService {
     print('Assigned ride ${request.id} to terminal: ${terminal.name}');
   }
 
-  /// Remove ride from a terminal
   static Future<void> _removeFromTerminal(String rideId, String terminalId) async {
     await _firestore
         .collection('terminals')
@@ -232,7 +218,6 @@ class RideRequestService {
     print('Removed ride $rideId from terminal: $terminalId');
   }
 
-  /// Start cascading timer that moves request to next terminal if not accepted
   static void _startCascadingTimer(
     String rideId,
     List<TerminalAssignment> sortedTerminals,
@@ -241,7 +226,6 @@ class RideRequestService {
     
     Timer.periodic(Duration(seconds: TERMINAL_TIMEOUT_SECONDS), (timer) async {
       try {
-        // Check current ride status
         final rideDoc = await _firestore.collection('rides').doc(rideId).get();
         
         if (!rideDoc.exists) {
@@ -253,31 +237,25 @@ class RideRequestService {
         final rideData = rideDoc.data()!;
         final status = rideData['status'];
         
-        // If accepted, completed, cancelled, or no_driver_available, stop cascading
         if (status != 'pending') {
           print('Ride $rideId status is $status, stopping cascade');
           timer.cancel();
           return;
         }
 
-        // Move to next terminal
         currentIndex++;
         
         if (currentIndex >= sortedTerminals.length) {
-          // All terminals exhausted - mark as no driver available
           print('All terminals exhausted for ride $rideId');
           
-          // Remove from last terminal FIRST
           final lastTerminalId = sortedTerminals[currentIndex - 1].terminal.id;
           await _removeFromTerminal(rideId, lastTerminalId);
           
-          // Then update status to no_driver_available
           await _firestore.collection('rides').doc(rideId).update({
             'status': 'no_driver_available',
             'noDriverTime': Timestamp.now(),
           });
 
-          // Also update in user's collection
           final userId = rideData['userId'];
           await _firestore
               .collection('users')
@@ -294,15 +272,12 @@ class RideRequestService {
           return;
         }
 
-        // Remove from previous terminal
         final previousTerminal = sortedTerminals[currentIndex - 1].terminal;
         await _removeFromTerminal(rideId, previousTerminal.id);
 
-        // Assign to next terminal
         final nextAssignment = sortedTerminals[currentIndex];
         final nextTerminal = nextAssignment.terminal;
         
-        // Update ride with new terminal assignment
         final Map<String, dynamic> updateData = {
           'assignedTerminal': nextTerminal.toJson(),
           'distance': nextAssignment.distance,
@@ -314,7 +289,6 @@ class RideRequestService {
 
         await _firestore.collection('rides').doc(rideId).update(updateData);
         
-        // Update in user's collection
         final userId = rideData['userId'];
         await _firestore
             .collection('users')
@@ -323,7 +297,6 @@ class RideRequestService {
             .doc(rideId)
             .update(updateData);
 
-        // Assign to new terminal
         final updatedRequest = RideRequest.fromJson({
           ...rideData,
           ...updateData,
@@ -341,7 +314,6 @@ class RideRequestService {
     });
   }
 
-  /// Listen to ride status updates
   static Stream<RideRequest?> listenToRideStatus(String rideId) {
     return _firestore
         .collection('rides')
@@ -355,7 +327,6 @@ class RideRequestService {
     });
   }
 
-  /// Get current user's rides
   static Stream<List<RideRequest>> listenToUserRides({String? userId}) {
     final User? currentUser = FirebaseAuth.instance.currentUser;
     final String uid = userId ?? currentUser?.uid ?? '';
@@ -379,7 +350,6 @@ class RideRequestService {
     });
   }
 
-  /// Get all pending rides for a specific terminal (for terminal app)
   static Stream<List<RideRequest>> listenToTerminalRides(String terminalId) {
     return _firestore
         .collection('terminals')
@@ -397,7 +367,6 @@ class RideRequestService {
     });
   }
 
-  /// Update ride status (for terminal app)
   static Future<bool> updateRideStatus(
     String rideId,
     String terminalId,
@@ -418,7 +387,6 @@ class RideRequestService {
         updateData['todaNumber'] = todaNumber;
       }
 
-      // Update status change timestamp
       switch (status) {
         case RideStatus.accepted:
           updateData['acceptedTime'] = Timestamp.now();
@@ -443,7 +411,6 @@ class RideRequestService {
           break;
       }
 
-      // Update terminal collection
       await _firestore
           .collection('terminals')
           .doc(terminalId)
@@ -451,13 +418,11 @@ class RideRequestService {
           .doc(rideId)
           .update(updateData);
 
-      // Update global rides collection
       await _firestore
           .collection('rides')
           .doc(rideId)
           .update(updateData);
       
-      // Update in user's rides collection
       final rideDoc = await _firestore.collection('rides').doc(rideId).get();
       if (rideDoc.exists) {
         final userId = rideDoc.data()?['userId'];
@@ -479,7 +444,6 @@ class RideRequestService {
     }
   }
 
-  /// Cancel ride request (for user)
   static Future<bool> cancelRideRequest(String rideId) async {
     try {
       final User? currentUser = FirebaseAuth.instance.currentUser;
@@ -499,13 +463,14 @@ class RideRequestService {
   }
 }
 
-// Enhanced Ride Request Model
 class RideRequest {
   final String id;
   final String userId;
   final String userName;
   final LatLng userLocation;
   final String userAddress;
+  final LatLng destinationLocation;
+  final String destinationAddress;
   final Terminal assignedTerminal;
   final double fareAmount;
   final String paymentMethod;
@@ -515,12 +480,10 @@ class RideRequest {
   final String estimatedTime;
   final int durationInSeconds;
   
-  // Cascading fields
   final int terminalAssignmentIndex;
   final List<String> sortedTerminalIds;
   final DateTime? lastTerminalSwitchTime;
   
-  // Additional fields
   final String? todaNumber;
   final String? acceptedTerminalId;
   final DateTime? acceptedTime;
@@ -537,6 +500,8 @@ class RideRequest {
     required this.userName,
     required this.userLocation,
     required this.userAddress,
+    required this.destinationLocation,
+    required this.destinationAddress,
     required this.assignedTerminal,
     required this.fareAmount,
     required this.paymentMethod,
@@ -567,6 +532,9 @@ class RideRequest {
       'userLatitude': userLocation.latitude,
       'userLongitude': userLocation.longitude,
       'userAddress': userAddress,
+      'destinationLatitude': destinationLocation.latitude,
+      'destinationLongitude': destinationLocation.longitude,
+      'destinationAddress': destinationAddress,
       'assignedTerminal': assignedTerminal.toJson(),
       'fareAmount': fareAmount,
       'paymentMethod': paymentMethod,
@@ -602,6 +570,11 @@ class RideRequest {
         json['userLongitude']?.toDouble() ?? 0.0,
       ),
       userAddress: json['userAddress'] ?? '',
+      destinationLocation: LatLng(
+        json['destinationLatitude']?.toDouble() ?? 0.0,
+        json['destinationLongitude']?.toDouble() ?? 0.0,
+      ),
+      destinationAddress: json['destinationAddress'] ?? '',
       assignedTerminal: Terminal(
         id: json['assignedTerminal']['id'] ?? '',
         name: json['assignedTerminal']['name'] ?? '',
@@ -651,6 +624,8 @@ class RideRequest {
     String? userName,
     LatLng? userLocation,
     String? userAddress,
+    LatLng? destinationLocation,
+    String? destinationAddress,
     Terminal? assignedTerminal,
     double? fareAmount,
     String? paymentMethod,
@@ -678,6 +653,8 @@ class RideRequest {
       userName: userName ?? this.userName,
       userLocation: userLocation ?? this.userLocation,
       userAddress: userAddress ?? this.userAddress,
+      destinationLocation: destinationLocation ?? this.destinationLocation,
+      destinationAddress: destinationAddress ?? this.destinationAddress,
       assignedTerminal: assignedTerminal ?? this.assignedTerminal,
       fareAmount: fareAmount ?? this.fareAmount,
       paymentMethod: paymentMethod ?? this.paymentMethod,
