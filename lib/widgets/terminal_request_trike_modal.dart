@@ -116,7 +116,32 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                           return CardBuilderPassengerTerminal(
                             rideRequest: rideRequest,
                             onAccept: () async {
+                              print('=== ACCEPT RIDE DEBUG ===');
                               print('Accept button pressed for ride: ${rideRequest.id}');
+                              print('Current modal terminal ID: ${widget.terminalId}');
+                              print('Ride assigned terminal ID: ${rideRequest.assignedTerminal.id}');
+                              print('Ride current status: ${rideRequest.status}');
+                              
+                              // CRITICAL FIX: Use the ride's assigned terminal, not the modal's terminal
+                              final String actualTerminalId = rideRequest.assignedTerminal.id;
+                              
+                              // Verify this terminal should handle this ride
+                              if (actualTerminalId != widget.terminalId) {
+                                print('⚠️ WARNING: Terminal mismatch!');
+                                print('This ride has been reassigned to: $actualTerminalId');
+                                print('Current modal is for: ${widget.terminalId}');
+                                
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'This ride has been reassigned to another terminal'),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
                               
                               // Store context references BEFORE any await
                               final navigator = Navigator.of(context);
@@ -149,20 +174,20 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
 
                                 print('Attempting to update ride status...');
                                 print('Ride ID: ${rideRequest.id}');
-                                print('Terminal ID: ${widget.terminalId}');
+                                print('Terminal ID (from ride): $actualTerminalId');
                                 print('TODA Number: $todaNumber');
 
-                                // Accept the ride with TODA number
+                                // Accept the ride with TODA number - USE ACTUAL TERMINAL ID
                                 try {
                                   final success = await RideRequestService
                                       .updateRideStatus(
                                     rideRequest.id,
-                                    widget.terminalId,
+                                    actualTerminalId, // FIXED: Use ride's terminal ID
                                     RideStatus.accepted,
                                     todaNumber: todaNumber,
                                   );
 
-                                  print('Update result: $success');
+                                  print('✅ Update result: $success');
 
                                   // Close loading dialog
                                   if (mounted) {
@@ -187,7 +212,8 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                                     );
                                   }
                                 } catch (e) {
-                                  print('Error accepting ride: $e');
+                                  print('❌ Error accepting ride: $e');
+                                  print('Error type: ${e.runtimeType}');
                                   
                                   // Close loading dialog
                                   if (mounted) {
@@ -203,10 +229,33 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                                     );
                                   }
                                 }
+                              } else {
+                                print('TODA number dialog cancelled or empty');
                               }
                             },
                             onCancel: () async {
+                              print('=== CANCEL RIDE DEBUG ===');
                               print('Cancel button pressed for ride: ${rideRequest.id}');
+                              print('Current modal terminal ID: ${widget.terminalId}');
+                              print('Ride assigned terminal ID: ${rideRequest.assignedTerminal.id}');
+                              
+                              // CRITICAL FIX: Use the ride's assigned terminal
+                              final String actualTerminalId = rideRequest.assignedTerminal.id;
+                              
+                              // Verify this terminal should handle this ride
+                              if (actualTerminalId != widget.terminalId) {
+                                print('⚠️ WARNING: Terminal mismatch on cancel!');
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                          'This ride has been reassigned to another terminal'),
+                                      backgroundColor: Colors.orange,
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
                               
                               // Store context references BEFORE any await
                               final navigator = Navigator.of(context);
@@ -223,11 +272,11 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                                 ),
                               );
 
-                              // Cancel the ride
+                              // Cancel the ride - USE ACTUAL TERMINAL ID
                               final success = await RideRequestService
                                   .updateRideStatus(
                                 rideRequest.id,
-                                widget.terminalId,
+                                actualTerminalId, // FIXED: Use ride's terminal ID
                                 RideStatus.cancelled,
                               );
 

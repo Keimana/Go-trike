@@ -1,12 +1,19 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:http/http.dart' as http;
 import 'distance_matrix_service.dart';
 
 class RideRequestService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static const int TERMINAL_TIMEOUT_SECONDS = 60; // 1 minute timeout per terminal
+  static const String _apiKey = 'AIzaSyBQCU2TstYBQAhbnhaZ_IWsZzashpBbQk4';
+  static const String _baseUrl = 'https://maps.googleapis.com/maps/api/distancematrix/json';
 
-  /// Submit ride request to nearest terminal
+  /// Submit ride request with cascading terminal assignment
   static Future<RideRequest?> submitRideRequest({
     required LatLng userLocation,
     required String userName,
@@ -15,82 +22,320 @@ class RideRequestService {
     required String paymentMethod,
   }) async {
     try {
-      // Get current user
       final User? currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) {
         throw Exception('User not authenticated');
       }
 
-      // Step 1: Find nearest terminal using Distance Matrix API
-      print('Finding nearest terminal...');
-      final TerminalAssignment? assignment = await DistanceMatrixService.findNearestTerminal(userLocation);
+      // Step 1: Get all terminals sorted by distance
+      print('Finding all terminals sorted by distance...');
+      final List<TerminalAssignment> sortedTerminals = 
+          await _getAllTerminalsSortedByDistance(userLocation);
       
-      if (assignment == null) {
-        throw Exception('Could not find nearest terminal');
+      if (sortedTerminals.isEmpty) {
+        throw Exception('No terminals available');
       }
 
-      print('Nearest terminal found: ${assignment.terminal.name}');
-      print('Distance: ${assignment.distance}, Time: ${assignment.estimatedTime}');
-
-      // Step 2: Create ride request object WITHOUT ID
-      final RideRequest rideRequest = RideRequest(
-        id: '', // Will be set by Firestore
+      // Step 2: Create initial ride request
+      final String requestId = _firestore.collection('rides').doc().id;
+      
+      final RideRequest initialRequest = RideRequest(
+        id: requestId,
         userId: currentUser.uid,
         userName: userName.isNotEmpty ? userName : (currentUser.displayName ?? 'User'),
         userLocation: userLocation,
         userAddress: userAddress,
-        assignedTerminal: assignment.terminal,
+        assignedTerminal: sortedTerminals[0].terminal,
         fareAmount: fareAmount,
         paymentMethod: paymentMethod,
         status: RideStatus.pending,
         requestTime: DateTime.now(),
-        distance: assignment.distance,
-        estimatedTime: assignment.estimatedTime,
-        durationInSeconds: assignment.durationInSeconds,
+        distance: sortedTerminals[0].distance,
+        estimatedTime: sortedTerminals[0].estimatedTime,
+        durationInSeconds: sortedTerminals[0].durationInSeconds,
+        terminalAssignmentIndex: 0,
+        sortedTerminalIds: sortedTerminals.map((t) => t.terminal.id).toList(),
       );
 
-      // Step 3: Save to Firebase under the assigned terminal
-      print('Saving ride request to Firebase...');
-      final DocumentReference docRef = await _firestore
-          .collection('terminals')
-          .doc(assignment.terminal.id)
-          .collection('ride_requests')
-          .add(rideRequest.toJson());
-
-      print('Generated ride ID: ${docRef.id}'); // DEBUG
-
-      // Step 4: Create the final ride request with the correct ID
-      final RideRequest finalRideRequest = rideRequest.copyWith(id: docRef.id);
-
-      // Step 5: UPDATE the terminal document with the correct ID
-      await _firestore
-          .collection('terminals')
-          .doc(assignment.terminal.id)
-          .collection('ride_requests')
-          .doc(docRef.id)
-          .update({'id': docRef.id}); // Add the ID field
-
-      // Step 6: Save to global rides collection with CORRECT ID
+      // Step 3: Save to global rides collection
       await _firestore
           .collection('rides')
-          .doc(docRef.id)
-          .set(finalRideRequest.toJson());
+          .doc(requestId)
+          .set(initialRequest.toJson());
 
-      // Step 7: Save to user's personal rides collection with CORRECT ID
+      // Step 4: Save to user's personal rides collection
       await _firestore
           .collection('users')
           .doc(currentUser.uid)
           .collection('rides')
-          .doc(docRef.id)
-          .set(finalRideRequest.toJson());
+          .doc(requestId)
+          .set(initialRequest.toJson());
 
-      print('Ride request saved successfully with ID: ${docRef.id}');
-      return finalRideRequest;
+      // Step 5: Assign to first terminal
+      await _assignToTerminal(initialRequest, sortedTerminals[0].terminal);
+
+      // Step 6: Start cascading timer
+      _startCascadingTimer(requestId, sortedTerminals);
+
+      print('Ride request submitted successfully with cascading enabled');
+      return initialRequest;
 
     } catch (e) {
       print('Error submitting ride request: $e');
       return null;
     }
+  }
+
+  /// Get all terminals sorted by distance from user location
+  static Future<List<TerminalAssignment>> _getAllTerminalsSortedByDistance(
+      LatLng userLocation) async {
+    try {
+      final List<Terminal> terminals = DistanceMatrixService.terminals;
+      
+      // Build destinations string for all terminals
+      final String destinations = terminals
+          .map((terminal) => '${terminal.location.latitude},${terminal.location.longitude}')
+          .join('|');
+
+      // Build API URL
+      final String url = '$_baseUrl?'
+          'origins=${userLocation.latitude},${userLocation.longitude}&'
+          'destinations=$destinations&'
+          'mode=driving&'
+          'units=metric&'
+          'departure_time=now&'
+          'traffic_model=best_guess&'
+          'key=$_apiKey';
+
+      // Make API request
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        
+        if (data['status'] == 'OK') {
+          return _processAllTerminalsResponse(data, userLocation, terminals);
+        }
+      }
+      
+      // Fallback to Haversine if API fails
+      return _getFallbackSortedTerminals(userLocation, terminals);
+      
+    } catch (e) {
+      print('Error getting sorted terminals: $e');
+      return _getFallbackSortedTerminals(userLocation, DistanceMatrixService.terminals);
+    }
+  }
+
+  /// Process Distance Matrix API response for all terminals
+  static List<TerminalAssignment> _processAllTerminalsResponse(
+    Map<String, dynamic> data,
+    LatLng userLocation,
+    List<Terminal> terminals,
+  ) {
+    final List<dynamic> elements = data['rows'][0]['elements'];
+    final List<TerminalAssignment> assignments = [];
+
+    for (int i = 0; i < elements.length && i < terminals.length; i++) {
+      final element = elements[i];
+      
+      if (element['status'] == 'OK') {
+        final int durationValue = element['duration']['value'];
+        
+        assignments.add(TerminalAssignment(
+          terminal: terminals[i],
+          userLocation: userLocation,
+          distance: element['distance']['text'],
+          estimatedTime: element['duration']['text'],
+          durationInSeconds: durationValue,
+        ));
+      }
+    }
+
+    // Sort by duration (shortest first)
+    assignments.sort((a, b) => a.durationInSeconds.compareTo(b.durationInSeconds));
+    
+    return assignments;
+  }
+
+  /// Fallback sorting using Haversine distance
+  static List<TerminalAssignment> _getFallbackSortedTerminals(
+    LatLng userLocation,
+    List<Terminal> terminals,
+  ) {
+    final List<TerminalAssignment> assignments = [];
+
+    for (final terminal in terminals) {
+      final double distance = _calculateHaversineDistance(
+        userLocation.latitude,
+        userLocation.longitude,
+        terminal.location.latitude,
+        terminal.location.longitude,
+      );
+
+      assignments.add(TerminalAssignment(
+        terminal: terminal,
+        userLocation: userLocation,
+        distance: '${distance.toStringAsFixed(1)} km',
+        estimatedTime: 'Estimated',
+        durationInSeconds: (distance * 120).toInt(),
+      ));
+    }
+
+    // Sort by distance (shortest first)
+    assignments.sort((a, b) => a.durationInSeconds.compareTo(b.durationInSeconds));
+    
+    return assignments;
+  }
+
+  /// Calculate distance using Haversine formula
+  static double _calculateHaversineDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double earthRadius = 6371; // Earth radius in kilometers
+    final double dLat = _degreesToRadians(lat2 - lat1);
+    final double dLon = _degreesToRadians(lon2 - lon1);
+
+    final double a = 
+        (sin(dLat / 2) * sin(dLat / 2)) +
+        cos(_degreesToRadians(lat1)) * cos(_degreesToRadians(lat2)) *
+        (sin(dLon / 2) * sin(dLon / 2));
+    
+    final double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return earthRadius * c;
+  }
+
+  static double _degreesToRadians(double degrees) {
+    return degrees * (pi / 180);
+  }
+
+  /// Assign ride to a specific terminal
+  static Future<void> _assignToTerminal(RideRequest request, Terminal terminal) async {
+    await _firestore
+        .collection('terminals')
+        .doc(terminal.id)
+        .collection('ride_requests')
+        .doc(request.id)
+        .set(request.toJson());
+    
+    print('Assigned ride ${request.id} to terminal: ${terminal.name}');
+  }
+
+  /// Remove ride from a terminal
+  static Future<void> _removeFromTerminal(String rideId, String terminalId) async {
+    await _firestore
+        .collection('terminals')
+        .doc(terminalId)
+        .collection('ride_requests')
+        .doc(rideId)
+        .delete();
+    
+    print('Removed ride $rideId from terminal: $terminalId');
+  }
+
+  /// Start cascading timer that moves request to next terminal if not accepted
+  static void _startCascadingTimer(
+    String rideId,
+    List<TerminalAssignment> sortedTerminals,
+  ) {
+    int currentIndex = 0;
+    
+    Timer.periodic(Duration(seconds: TERMINAL_TIMEOUT_SECONDS), (timer) async {
+      try {
+        // Check current ride status
+        final rideDoc = await _firestore.collection('rides').doc(rideId).get();
+        
+        if (!rideDoc.exists) {
+          print('Ride $rideId no longer exists, stopping cascade');
+          timer.cancel();
+          return;
+        }
+
+        final rideData = rideDoc.data()!;
+        final status = rideData['status'];
+        
+        // If accepted or completed, stop cascading
+        if (status != 'pending') {
+          print('Ride $rideId status is $status, stopping cascade');
+          timer.cancel();
+          return;
+        }
+
+        // Move to next terminal
+        currentIndex++;
+        
+        if (currentIndex >= sortedTerminals.length) {
+          // All terminals exhausted - mark as no driver available
+          print('All terminals exhausted for ride $rideId');
+          
+          await _firestore.collection('rides').doc(rideId).update({
+            'status': 'no_driver_available',
+            'noDriverTime': Timestamp.now(),
+          });
+
+          // Also update in user's collection
+          final userId = rideData['userId'];
+          await _firestore
+              .collection('users')
+              .doc(userId)
+              .collection('rides')
+              .doc(rideId)
+              .update({
+            'status': 'no_driver_available',
+            'noDriverTime': Timestamp.now(),
+          });
+
+          // Remove from last terminal
+          final lastTerminalId = sortedTerminals[currentIndex - 1].terminal.id;
+          await _removeFromTerminal(rideId, lastTerminalId);
+          
+          timer.cancel();
+          return;
+        }
+
+        // Remove from previous terminal
+        final previousTerminal = sortedTerminals[currentIndex - 1].terminal;
+        await _removeFromTerminal(rideId, previousTerminal.id);
+
+        // Assign to next terminal
+        final nextAssignment = sortedTerminals[currentIndex];
+        final nextTerminal = nextAssignment.terminal;
+        
+        // Update ride with new terminal assignment
+        final Map<String, dynamic> updateData = {
+          'assignedTerminal': nextTerminal.toJson(),
+          'distance': nextAssignment.distance,
+          'estimatedTime': nextAssignment.estimatedTime,
+          'durationInSeconds': nextAssignment.durationInSeconds,
+          'terminalAssignmentIndex': currentIndex,
+          'lastTerminalSwitchTime': Timestamp.now(),
+        };
+
+        await _firestore.collection('rides').doc(rideId).update(updateData);
+        
+        // Update in user's collection
+        final userId = rideData['userId'];
+        await _firestore
+            .collection('users')
+            .doc(userId)
+            .collection('rides')
+            .doc(rideId)
+            .update(updateData);
+
+        // Assign to new terminal
+        final updatedRequest = RideRequest.fromJson({
+          ...rideData,
+          ...updateData,
+          'id': rideId,
+        });
+        
+        await _assignToTerminal(updatedRequest, nextTerminal);
+        
+        print('Cascaded ride $rideId to terminal: ${nextTerminal.name} (${currentIndex + 1}/${sortedTerminals.length})');
+        
+      } catch (e) {
+        print('Error in cascading timer: $e');
+        timer.cancel();
+      }
+    });
   }
 
   /// Listen to ride status updates
@@ -151,9 +396,9 @@ class RideRequestService {
 
   /// Update ride status (for terminal app)
   static Future<bool> updateRideStatus(
-    String rideId, 
-    String terminalId, 
-    RideStatus status, 
+    String rideId,
+    String terminalId,
+    RideStatus status,
     {String? driverId, String? driverName, String? todaNumber}
   ) async {
     try {
@@ -161,22 +406,20 @@ class RideRequestService {
       print('Ride ID: $rideId');
       print('Terminal ID: $terminalId');
       print('Status: $status');
-      print('TODA Number: $todaNumber');
 
       final Map<String, dynamic> updateData = {
         'status': status.toString().split('.').last,
       };
 
-      // Add TODA number if provided (check for both null and empty string)
       if (todaNumber != null && todaNumber.isNotEmpty) {
         updateData['todaNumber'] = todaNumber;
-        print('Adding todaNumber to update: $todaNumber');
       }
 
       // Update status change timestamp
       switch (status) {
         case RideStatus.accepted:
           updateData['acceptedTime'] = Timestamp.now();
+          updateData['acceptedTerminalId'] = terminalId;
           break;
         case RideStatus.enRoute:
           updateData['enRouteTime'] = Timestamp.now();
@@ -197,59 +440,31 @@ class RideRequestService {
           break;
       }
 
-      print('Final update data: $updateData');
-
-      // First, verify the document exists in terminal collection
-      final terminalDocRef = _firestore
+      // Update terminal collection
+      await _firestore
           .collection('terminals')
           .doc(terminalId)
           .collection('ride_requests')
-          .doc(rideId);
-      
-      final terminalDoc = await terminalDocRef.get();
-      if (!terminalDoc.exists) {
-        print('ERROR: Document does not exist in terminal collection!');
-        print('Path: terminals/$terminalId/ride_requests/$rideId');
-        return false;
-      }
-
-      print('Document exists in terminal collection');
-      print('Current status in DB: ${terminalDoc.data()?['status']}');
-
-      // Update terminal collection
-      print('Updating terminal collection...');
-      await terminalDocRef.update(updateData);
-      print('Terminal collection updated');
-
-      // Verify the update worked
-      final verifyDoc = await terminalDocRef.get();
-      print('Verified new status: ${verifyDoc.data()?['status']}');
+          .doc(rideId)
+          .update(updateData);
 
       // Update global rides collection
-      print('Updating rides collection...');
       await _firestore
           .collection('rides')
           .doc(rideId)
           .update(updateData);
-      print('Rides collection updated');
       
-      // Also update in user's rides collection
-      print('Getting user ID from ride...');
+      // Update in user's rides collection
       final rideDoc = await _firestore.collection('rides').doc(rideId).get();
       if (rideDoc.exists) {
-        final rideData = rideDoc.data();
-        final userId = rideData?['userId'];
-        print('User ID: $userId');
-        
+        final userId = rideDoc.data()?['userId'];
         if (userId != null) {
-          print('Updating user rides collection...');
           await _firestore
               .collection('users')
               .doc(userId)
               .collection('rides')
               .doc(rideId)
               .update(updateData);
-          print('User rides collection updated');
         }
       }
       
@@ -257,11 +472,6 @@ class RideRequestService {
       return true;
     } catch (e) {
       print('❌ ERROR updating ride status: $e');
-      print('Error type: ${e.runtimeType}');
-      if (e is FirebaseException) {
-        print('Firebase error code: ${e.code}');
-        print('Firebase error message: ${e.message}');
-      }
       return false;
     }
   }
@@ -272,14 +482,12 @@ class RideRequestService {
       final User? currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) return false;
 
-      // Get ride info first
       final rideDoc = await _firestore.collection('rides').doc(rideId).get();
       if (!rideDoc.exists) return false;
 
       final rideData = rideDoc.data()!;
       final terminalId = rideData['assignedTerminal']['id'];
 
-      // Update status to cancelled
       return await updateRideStatus(rideId, terminalId, RideStatus.cancelled);
     } catch (e) {
       print('Error cancelling ride request: $e');
@@ -288,7 +496,7 @@ class RideRequestService {
   }
 }
 
-// Ride Request Model
+// Enhanced Ride Request Model
 class RideRequest {
   final String id;
   final String userId;
@@ -304,14 +512,21 @@ class RideRequest {
   final String estimatedTime;
   final int durationInSeconds;
   
-  // Additional fields for tracking
+  // Cascading fields
+  final int terminalAssignmentIndex;
+  final List<String> sortedTerminalIds;
+  final DateTime? lastTerminalSwitchTime;
+  
+  // Additional fields
   final String? todaNumber;
+  final String? acceptedTerminalId;
   final DateTime? acceptedTime;
   final DateTime? enRouteTime;
   final DateTime? arrivedTime;
   final DateTime? inProgressTime;
   final DateTime? completedTime;
   final DateTime? cancelledTime;
+  final DateTime? noDriverTime;
 
   RideRequest({
     required this.id,
@@ -327,13 +542,18 @@ class RideRequest {
     required this.distance,
     required this.estimatedTime,
     required this.durationInSeconds,
+    this.terminalAssignmentIndex = 0,
+    this.sortedTerminalIds = const [],
+    this.lastTerminalSwitchTime,
     this.todaNumber,
+    this.acceptedTerminalId,
     this.acceptedTime,
     this.enRouteTime,
     this.arrivedTime,
     this.inProgressTime,
     this.completedTime,
     this.cancelledTime,
+    this.noDriverTime,
   });
 
   Map<String, dynamic> toJson() {
@@ -352,13 +572,20 @@ class RideRequest {
       'distance': distance,
       'estimatedTime': estimatedTime,
       'durationInSeconds': durationInSeconds,
+      'terminalAssignmentIndex': terminalAssignmentIndex,
+      'sortedTerminalIds': sortedTerminalIds,
+      'lastTerminalSwitchTime': lastTerminalSwitchTime != null 
+          ? Timestamp.fromDate(lastTerminalSwitchTime!) 
+          : null,
       'todaNumber': todaNumber,
+      'acceptedTerminalId': acceptedTerminalId,
       'acceptedTime': acceptedTime != null ? Timestamp.fromDate(acceptedTime!) : null,
       'enRouteTime': enRouteTime != null ? Timestamp.fromDate(enRouteTime!) : null,
       'arrivedTime': arrivedTime != null ? Timestamp.fromDate(arrivedTime!) : null,
       'inProgressTime': inProgressTime != null ? Timestamp.fromDate(inProgressTime!) : null,
       'completedTime': completedTime != null ? Timestamp.fromDate(completedTime!) : null,
       'cancelledTime': cancelledTime != null ? Timestamp.fromDate(cancelledTime!) : null,
+      'noDriverTime': noDriverTime != null ? Timestamp.fromDate(noDriverTime!) : null,
     };
   }
 
@@ -383,21 +610,35 @@ class RideRequest {
       ),
       fareAmount: json['fareAmount']?.toDouble() ?? 0.0,
       paymentMethod: json['paymentMethod'] ?? '',
-      status: RideStatus.values.firstWhere(
-        (status) => status.toString().split('.').last == json['status'],
-        orElse: () => RideStatus.pending,
-      ),
+      status: _parseStatus(json['status']),
       requestTime: (json['requestTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
       distance: json['distance'] ?? '',
       estimatedTime: json['estimatedTime'] ?? '',
       durationInSeconds: json['durationInSeconds'] ?? 0,
+      terminalAssignmentIndex: json['terminalAssignmentIndex'] ?? 0,
+      sortedTerminalIds: (json['sortedTerminalIds'] as List<dynamic>?)
+          ?.map((e) => e.toString())
+          .toList() ?? [],
+      lastTerminalSwitchTime: (json['lastTerminalSwitchTime'] as Timestamp?)?.toDate(),
       todaNumber: json['todaNumber'],
+      acceptedTerminalId: json['acceptedTerminalId'],
       acceptedTime: (json['acceptedTime'] as Timestamp?)?.toDate(),
       enRouteTime: (json['enRouteTime'] as Timestamp?)?.toDate(),
       arrivedTime: (json['arrivedTime'] as Timestamp?)?.toDate(),
       inProgressTime: (json['inProgressTime'] as Timestamp?)?.toDate(),
       completedTime: (json['completedTime'] as Timestamp?)?.toDate(),
       cancelledTime: (json['cancelledTime'] as Timestamp?)?.toDate(),
+      noDriverTime: (json['noDriverTime'] as Timestamp?)?.toDate(),
+    );
+  }
+
+  static RideStatus _parseStatus(String? status) {
+    if (status == 'no_driver_available') {
+      return RideStatus.noDriverAvailable;
+    }
+    return RideStatus.values.firstWhere(
+      (s) => s.toString().split('.').last == status,
+      orElse: () => RideStatus.pending,
     );
   }
 
@@ -415,13 +656,18 @@ class RideRequest {
     String? distance,
     String? estimatedTime,
     int? durationInSeconds,
+    int? terminalAssignmentIndex,
+    List<String>? sortedTerminalIds,
+    DateTime? lastTerminalSwitchTime,
     String? todaNumber,
+    String? acceptedTerminalId,
     DateTime? acceptedTime,
     DateTime? enRouteTime,
     DateTime? arrivedTime,
     DateTime? inProgressTime,
     DateTime? completedTime,
     DateTime? cancelledTime,
+    DateTime? noDriverTime,
   }) {
     return RideRequest(
       id: id ?? this.id,
@@ -437,13 +683,18 @@ class RideRequest {
       distance: distance ?? this.distance,
       estimatedTime: estimatedTime ?? this.estimatedTime,
       durationInSeconds: durationInSeconds ?? this.durationInSeconds,
+      terminalAssignmentIndex: terminalAssignmentIndex ?? this.terminalAssignmentIndex,
+      sortedTerminalIds: sortedTerminalIds ?? this.sortedTerminalIds,
+      lastTerminalSwitchTime: lastTerminalSwitchTime ?? this.lastTerminalSwitchTime,
       todaNumber: todaNumber ?? this.todaNumber,
+      acceptedTerminalId: acceptedTerminalId ?? this.acceptedTerminalId,
       acceptedTime: acceptedTime ?? this.acceptedTime,
       enRouteTime: enRouteTime ?? this.enRouteTime,
       arrivedTime: arrivedTime ?? this.arrivedTime,
       inProgressTime: inProgressTime ?? this.inProgressTime,
       completedTime: completedTime ?? this.completedTime,
       cancelledTime: cancelledTime ?? this.cancelledTime,
+      noDriverTime: noDriverTime ?? this.noDriverTime,
     );
   }
 }
@@ -456,4 +707,5 @@ enum RideStatus {
   inProgress,
   completed,
   cancelled,
+  noDriverAvailable,
 }
