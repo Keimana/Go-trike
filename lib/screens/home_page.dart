@@ -511,50 +511,58 @@ class _MainScreenContentState extends State<MainScreenContent> {
   }
 
   Future<void> _handleRideRequest() async {
-    if (_hasPendingRide) {
-      _showSnackBar('You already have a pending ride request', Colors.orange);
-      return;
-    }
+  if (_hasPendingRide) {
+    _showSnackBar('You already have a pending ride request', Colors.orange);
+    return;
+  }
 
-    final pickupLocation = _getPickupLocation();
-    if (pickupLocation == null) {
-      _showSnackBar('Please select a pickup location first', Colors.red);
-      return;
-    }
+  final pickupLocation = _getPickupLocation();
+  if (pickupLocation == null) {
+    _showSnackBar('Please select a pickup location first', Colors.red);
+    return;
+  }
 
-    if (_selectedDestinationLocation == null) {
-      _showSnackBar('Please select a destination', Colors.red);
-      return;
-    }
+  if (_selectedDestinationLocation == null) {
+    _showSnackBar('Please select a destination', Colors.red);
+    return;
+  }
 
-    final result = await showModalBottomSheet<RideRequest?>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.55,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          builder: (context, scrollController) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: RequestTrikePage(
-                userLocation: pickupLocation,
-                userAddress: _getPickupAddressText(),
-                destinationLocation: _selectedDestinationLocation,
-                destinationAddress: _getDestinationAddressText(),
-                onRequestConfirmed: () => Navigator.of(context).pop(),
-              ),
-            );
-          },
-        );
-      },
-    );
+  // ← ADD THESE DEBUG PRINTS
+  print('=== HOME PAGE VALUES ===');
+  print('Distance: $_distanceText');
+  print('Duration: $_durationText');
+  print('========================');
+
+  final result = await showModalBottomSheet<RideRequest?>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent,
+    builder: (context) {
+      return DraggableScrollableSheet(
+        initialChildSize: 0.55,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (context, scrollController) {
+          return Container(
+            padding: const EdgeInsets.all(20),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: RequestTrikePage(
+              userLocation: pickupLocation,
+              userAddress: _getPickupAddressText(),
+              destinationLocation: _selectedDestinationLocation,
+              destinationAddress: _getDestinationAddressText(),
+              precalculatedDistance: _distanceText,
+              precalculatedDuration: _durationText,
+              onRequestConfirmed: () => Navigator.of(context).pop(),
+            ),
+          );
+        },
+      );
+    },
+  );
 
     if (result != null && result is RideRequest && mounted) {
       setState(() {

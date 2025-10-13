@@ -10,7 +10,7 @@ import 'distance_matrix_service.dart';
 
 class RideRequestService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const int TERMINAL_TIMEOUT_SECONDS = 30;
+  static const int TERMINAL_TIMEOUT_SECONDS = 60;
   static final String _apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api/distancematrix/json';
 
@@ -23,6 +23,10 @@ class RideRequestService {
     required String destinationAddress,
     required double fareAmount,
     required String paymentMethod,
+    // ADD THESE NEW PARAMETERS
+    required String rideDistance,
+    required String rideEstimatedTime,
+    required int rideDurationInSeconds,
   }) async {
     try {
       final User? currentUser = FirebaseAuth.instance.currentUser;
@@ -40,6 +44,7 @@ class RideRequestService {
 
       final String requestId = _firestore.collection('rides').doc().id;
       
+      // USE THE RIDE DISTANCE/TIME INSTEAD OF TERMINAL DISTANCE/TIME
       final RideRequest initialRequest = RideRequest(
         id: requestId,
         userId: currentUser.uid,
@@ -53,9 +58,9 @@ class RideRequestService {
         paymentMethod: paymentMethod,
         status: RideStatus.pending,
         requestTime: DateTime.now(),
-        distance: sortedTerminals[0].distance,
-        estimatedTime: sortedTerminals[0].estimatedTime,
-        durationInSeconds: sortedTerminals[0].durationInSeconds,
+        distance: rideDistance,  // ← Changed from sortedTerminals[0].distance
+        estimatedTime: rideEstimatedTime,  // ← Changed from sortedTerminals[0].estimatedTime
+        durationInSeconds: rideDurationInSeconds,  // ← Changed from sortedTerminals[0].durationInSeconds
         terminalAssignmentIndex: 0,
         sortedTerminalIds: sortedTerminals.map((t) => t.terminal.id).toList(),
       );
@@ -74,7 +79,7 @@ class RideRequestService {
 
       await _assignToTerminal(initialRequest, sortedTerminals[0].terminal);
 
-      _startCascadingTimer(requestId, sortedTerminals);
+      _startCascadingTimer(requestId, sortedTerminals, rideDistance, rideEstimatedTime, rideDurationInSeconds);
 
       print('Ride request submitted successfully with cascading enabled');
       return initialRequest;
@@ -218,9 +223,13 @@ class RideRequestService {
     print('Removed ride $rideId from terminal: $terminalId');
   }
 
+  // UPDATE: Add ride distance/time parameters to preserve them during cascading
   static void _startCascadingTimer(
     String rideId,
     List<TerminalAssignment> sortedTerminals,
+    String rideDistance,
+    String rideEstimatedTime,
+    int rideDurationInSeconds,
   ) {
     int currentIndex = 0;
     
@@ -275,14 +284,12 @@ class RideRequestService {
         final previousTerminal = sortedTerminals[currentIndex - 1].terminal;
         await _removeFromTerminal(rideId, previousTerminal.id);
 
-        final nextAssignment = sortedTerminals[currentIndex];
-        final nextTerminal = nextAssignment.terminal;
+        final nextTerminal = sortedTerminals[currentIndex].terminal;
         
+        // KEEP THE ORIGINAL RIDE DISTANCE/TIME, ONLY CHANGE THE TERMINAL
         final Map<String, dynamic> updateData = {
           'assignedTerminal': nextTerminal.toJson(),
-          'distance': nextAssignment.distance,
-          'estimatedTime': nextAssignment.estimatedTime,
-          'durationInSeconds': nextAssignment.durationInSeconds,
+          // Don't update distance/estimatedTime/durationInSeconds - keep original ride values
           'terminalAssignmentIndex': currentIndex,
           'lastTerminalSwitchTime': Timestamp.now(),
         };
