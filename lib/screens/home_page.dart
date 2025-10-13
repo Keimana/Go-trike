@@ -65,6 +65,8 @@ class _MainScreenContentState extends State<MainScreenContent> {
   LatLng? _selectedPickupLocation;
   LatLng? _selectedDestinationLocation;
   String? _currentAddress;
+  String? _selectedPickupAddress;
+  String? _selectedDestinationAddress;
   LocationPickMode _pickMode = LocationPickMode.none;
   bool _useCurrentLocation = true;
 
@@ -234,7 +236,10 @@ class _MainScreenContentState extends State<MainScreenContent> {
           markerId: const MarkerId('pickup_location'),
           position: _selectedPickupLocation!,
           icon: _pickupIcon!,
-          infoWindow: const InfoWindow(title: "Pickup Location", snippet: "Tap to view details"),
+          infoWindow: InfoWindow(
+            title: "Pickup Location", 
+            snippet: _selectedPickupAddress ?? "Tap to view details"
+          ),
         ),
       );
     }
@@ -245,7 +250,10 @@ class _MainScreenContentState extends State<MainScreenContent> {
           markerId: const MarkerId('destination_location'),
           position: _selectedDestinationLocation!,
           icon: _destinationIcon!,
-          infoWindow: const InfoWindow(title: "Destination", snippet: "Tap to view details"),
+          infoWindow: InfoWindow(
+            title: "Destination", 
+            snippet: _selectedDestinationAddress ?? "Tap to view details"
+          ),
         ),
       );
     }
@@ -262,6 +270,102 @@ class _MainScreenContentState extends State<MainScreenContent> {
         location.latitude <= _telabastaganBounds.northeast.latitude &&
         location.longitude >= _telabastaganBounds.southwest.longitude &&
         location.longitude <= _telabastaganBounds.northeast.longitude;
+  }
+
+  // Reverse geocoding function to get address from coordinates
+  Future<String?> _reverseGeocode(LatLng location) async {
+    try {
+      final String apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
+      if (apiKey.isEmpty) {
+        debugPrint('Google Maps API key is missing');
+        return null;
+      }
+
+      final String url = 'https://maps.googleapis.com/maps/api/geocode/json?'
+          'latlng=${location.latitude},${location.longitude}&key=$apiKey';
+
+      debugPrint('Reverse geocoding URL: $url');
+
+      final response = await http.get(Uri.parse(url));
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        debugPrint('Geocoding response status: ${data['status']}');
+        
+        if (data['status'] == 'OK' && data['results'].isNotEmpty) {
+          final address = data['results'][0]['formatted_address'];
+          debugPrint('Found address: $address');
+          return address;
+        } else {
+          debugPrint('Geocoding failed with status: ${data['status']}');
+          debugPrint('Results length: ${data['results']?.length ?? 0}');
+        }
+      } else {
+        debugPrint('HTTP error: ${response.statusCode}');
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error reverse geocoding: $e');
+      return null;
+    }
+  }
+
+  // Fallback method to create readable address from coordinates
+  String _createFallbackAddress(LatLng location) {
+    // Since we're in Telabastagan area, we can create a descriptive address
+    final double lat = location.latitude;
+    final double lng = location.longitude;
+    
+    // Create relative position descriptions for Telabastagan
+    String area = "Telabastagan";
+    
+    // Add more specific area based on coordinates if needed
+    if (lat > 15.117) {
+      area = "North $area";
+    } else if (lat < 15.116) {
+      area = "South $area";
+    }
+    
+    return "$area (${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})";
+  }
+
+  // Get a shorter, more readable address
+  Future<String> _getReadableAddress(LatLng location) async {
+    try {
+      final fullAddress = await _reverseGeocode(location);
+      
+      if (fullAddress == null) {
+        return _createFallbackAddress(location);
+      }
+
+      // Extract a shorter, more user-friendly address
+      final parts = fullAddress.split(',');
+      
+      // For Telabastagan area, try to get the most relevant parts
+      if (parts.length >= 2) {
+        // Check if it's in Telabastagan area and format accordingly
+        if (fullAddress.toLowerCase().contains('telabastagan')) {
+          // Return street + Telabastagan
+          for (int i = 0; i < parts.length; i++) {
+            if (parts[i].toLowerCase().contains('telabastagan')) {
+              if (i > 0) {
+                return '${parts[i-1].trim()}, ${parts[i].trim()}';
+              } else {
+                return parts[i].trim();
+              }
+            }
+          }
+        }
+        
+        // General case: return first two parts
+        return '${parts[0].trim()}, ${parts[1].trim()}';
+      }
+      
+      return fullAddress;
+    } catch (e) {
+      debugPrint('Error getting readable address: $e');
+      return _createFallbackAddress(location);
+    }
   }
 
   Future<void> _getCurrentLocation() async {
@@ -291,16 +395,29 @@ class _MainScreenContentState extends State<MainScreenContent> {
       if (mounted) {
         setState(() {
           _currentUserLocation = currentLocation;
-          _currentAddress = "Current Location";
+          _currentAddress = "Getting address...";
+        });
+      }
+
+      // Get readable address for current location
+      final address = await _getReadableAddress(currentLocation);
+      if (mounted) {
+        setState(() {
+          _currentAddress = address;
         });
       }
     } catch (e) {
       debugPrint('Error getting location: $e');
-      if (mounted) _showLocationErrorDialog();
+      if (mounted) {
+        setState(() {
+          _currentAddress = "Location unavailable";
+        });
+        _showLocationErrorDialog();
+      }
     }
   }
 
-  void _onMapTap(LatLng tappedLocation) {
+  void _onMapTap(LatLng tappedLocation) async {
     if (_pickMode == LocationPickMode.none) return;
 
     if (!_isWithinBounds(tappedLocation)) {
@@ -308,19 +425,37 @@ class _MainScreenContentState extends State<MainScreenContent> {
       return;
     }
 
-    setState(() {
-      if (_pickMode == LocationPickMode.pickup) {
-        _selectedPickupLocation = tappedLocation;
-      } else if (_pickMode == LocationPickMode.destination) {
-        _selectedDestinationLocation = tappedLocation;
-      }
-      _pickMode = LocationPickMode.none;
-      _calculateDistanceAndETA();
-    });
+    // Show loading for address
+    if (_pickMode == LocationPickMode.pickup) {
+      setState(() {
+        _selectedPickupAddress = "Getting address...";
+      });
+    } else if (_pickMode == LocationPickMode.destination) {
+      setState(() {
+        _selectedDestinationAddress = "Getting address...";
+      });
+    }
 
-    _updateMarkers();
-    _mapController?.animateCamera(CameraUpdate.newLatLngZoom(tappedLocation, 17.0));
-    _showSnackBar('Location selected!', Colors.green);
+    // Get readable address for the tapped location
+    final address = await _getReadableAddress(tappedLocation);
+
+    if (mounted) {
+      setState(() {
+        if (_pickMode == LocationPickMode.pickup) {
+          _selectedPickupLocation = tappedLocation;
+          _selectedPickupAddress = address;
+        } else if (_pickMode == LocationPickMode.destination) {
+          _selectedDestinationLocation = tappedLocation;
+          _selectedDestinationAddress = address;
+        }
+        _pickMode = LocationPickMode.none;
+        _calculateDistanceAndETA();
+      });
+
+      _updateMarkers();
+      _mapController?.animateCamera(CameraUpdate.newLatLngZoom(tappedLocation, 17.0));
+      _showSnackBar('Location selected: $address', Colors.green);
+    }
   }
 
   void _enableLocationPicking(LocationPickMode mode) {
@@ -581,12 +716,12 @@ class _MainScreenContentState extends State<MainScreenContent> {
     if (_useCurrentLocation) {
       return _currentAddress ?? "Current Location";
     } else {
-      return _selectedPickupLocation != null ? "Selected Pickup" : "No pickup selected";
+      return _selectedPickupAddress ?? "Selected Pickup";
     }
   }
 
   String _getDestinationAddressText() {
-    return _selectedDestinationLocation != null ? "Selected Destination" : "No destination selected";
+    return _selectedDestinationAddress ?? "Selected Destination";
   }
 
   void _showSnackBar(String message, Color color) {
