@@ -11,7 +11,6 @@ import 'request_trike.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'settings_screen.dart';
 import '../services/ride_request_service.dart';
-import '../services/distance_matrix_service.dart';
 import '../widgets/user_modal_accept.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -699,7 +698,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
     },
   );
 
-    if (result != null && result is RideRequest && mounted) {
+    if (result != null && mounted) {
       setState(() {
         _hasPendingRide = true;
         _activeRideId = result.id;
@@ -988,9 +987,9 @@ class _MainScreenContentState extends State<MainScreenContent> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(color: Colors.grey[100], borderRadius: BorderRadius.circular(12)),
-                    child: Row(
+                    child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
+                      children: [
                         SizedBox(
                           width: 16,
                           height: 16,

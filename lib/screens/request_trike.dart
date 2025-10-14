@@ -7,7 +7,6 @@ import '../services/ride_request_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'dart:math';
 
 class RequestTrikePage extends StatefulWidget {
   final LatLng userLocation;

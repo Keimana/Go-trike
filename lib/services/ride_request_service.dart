@@ -233,7 +233,7 @@ class RideRequestService {
   ) {
     int currentIndex = 0;
     
-    Timer.periodic(Duration(seconds: TERMINAL_TIMEOUT_SECONDS), (timer) async {
+    Timer.periodic(const Duration(seconds: TERMINAL_TIMEOUT_SECONDS), (timer) async {
       try {
         final rideDoc = await _firestore.collection('rides').doc(rideId).get();
         

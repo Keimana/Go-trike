@@ -53,13 +53,13 @@ class _SignInAdminState extends State<SignInAdmin> {
 
                       // Go Trike Branding
                       RichText(
-                        text: TextSpan(
-                          style: const TextStyle(
+                        text: const TextSpan(
+                          style: TextStyle(
                             fontSize: 64,
                             fontWeight: FontWeight.bold,
                             fontFamily: "Roboto",
                           ),
-                          children: const [
+                          children: [
                             TextSpan(text: "Go", style: TextStyle(color: Color(0xFF0097B2))),
                             TextSpan(text: " ", style: TextStyle(color: Color(0xFF34C759))),
                             TextSpan(text: "Trike", style: TextStyle(color: Color(0xFFFF9500))),

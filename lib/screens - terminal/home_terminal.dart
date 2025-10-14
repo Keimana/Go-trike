@@ -276,8 +276,8 @@ Future<BitmapDescriptor> _createUserMarker() async {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: const [
+                const Row(
+                  children: [
                     Icon(Icons.map_outlined, color: Color(0xFF0097B2), size: 16),
                     SizedBox(width: 6),
                     Text(

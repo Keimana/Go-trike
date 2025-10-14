@@ -493,14 +493,14 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 right: BorderSide(color: Colors.grey[300]!),
               ),
             ),
-            child: Row(
+            child: const Row(
               children: [
-                const Text(
+                Text(
                   '🇵🇭',
                   style: TextStyle(fontSize: 16),
                 ),
-                const SizedBox(width: 4),
-                const Text(
+                SizedBox(width: 4),
+                Text(
                   '+63',
                   style: TextStyle(
                     fontSize: 16,
