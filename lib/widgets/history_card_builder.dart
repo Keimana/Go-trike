@@ -124,7 +124,7 @@ class HistoryCardBuilder extends StatelessWidget {
 
               // Toda #
               Text(
-                toda,
+                "Toda #: $toda",
                 style: TextStyle(
                   fontSize: w * 0.028,
                   fontWeight: FontWeight.w400,

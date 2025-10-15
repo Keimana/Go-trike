@@ -23,7 +23,6 @@ class RideRequestService {
     required String destinationAddress,
     required double fareAmount,
     required String paymentMethod,
-    // ADD THESE NEW PARAMETERS
     required String rideDistance,
     required String rideEstimatedTime,
     required int rideDurationInSeconds,
@@ -44,7 +43,6 @@ class RideRequestService {
 
       final String requestId = _firestore.collection('rides').doc().id;
       
-      // USE THE RIDE DISTANCE/TIME INSTEAD OF TERMINAL DISTANCE/TIME
       final RideRequest initialRequest = RideRequest(
         id: requestId,
         userId: currentUser.uid,
@@ -58,9 +56,9 @@ class RideRequestService {
         paymentMethod: paymentMethod,
         status: RideStatus.pending,
         requestTime: DateTime.now(),
-        distance: rideDistance,  // ← Changed from sortedTerminals[0].distance
-        estimatedTime: rideEstimatedTime,  // ← Changed from sortedTerminals[0].estimatedTime
-        durationInSeconds: rideDurationInSeconds,  // ← Changed from sortedTerminals[0].durationInSeconds
+        distance: rideDistance,
+        estimatedTime: rideEstimatedTime,
+        durationInSeconds: rideDurationInSeconds,
         terminalAssignmentIndex: 0,
         sortedTerminalIds: sortedTerminals.map((t) => t.terminal.id).toList(),
       );
@@ -223,7 +221,6 @@ class RideRequestService {
     print('Removed ride $rideId from terminal: $terminalId');
   }
 
-  // UPDATE: Add ride distance/time parameters to preserve them during cascading
   static void _startCascadingTimer(
     String rideId,
     List<TerminalAssignment> sortedTerminals,
@@ -286,10 +283,8 @@ class RideRequestService {
 
         final nextTerminal = sortedTerminals[currentIndex].terminal;
         
-        // KEEP THE ORIGINAL RIDE DISTANCE/TIME, ONLY CHANGE THE TERMINAL
         final Map<String, dynamic> updateData = {
           'assignedTerminal': nextTerminal.toJson(),
-          // Don't update distance/estimatedTime/durationInSeconds - keep original ride values
           'terminalAssignmentIndex': currentIndex,
           'lastTerminalSwitchTime': Timestamp.now(),
         };
@@ -338,22 +333,48 @@ class RideRequestService {
     final User? currentUser = FirebaseAuth.instance.currentUser;
     final String uid = userId ?? currentUser?.uid ?? '';
     
+    print('=== LISTEN TO USER RIDES ===');
+    print('Current User: ${currentUser?.uid}');
+    print('Current User Email: ${currentUser?.email}');
+    print('Using UID: $uid');
+    
     if (uid.isEmpty) {
+      print('❌ No user ID - returning empty stream');
       return Stream.value([]);
     }
+
+    print('📡 Starting Firestore listener for: users/$uid/rides');
 
     return _firestore
         .collection('users')
         .doc(uid)
         .collection('rides')
-        .orderBy('requestTime', descending: true)
+        // Try without orderBy first to check if it's an index issue
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
+      print('📦 Received ${snapshot.docs.length} ride documents');
+      
+      if (snapshot.docs.isEmpty) {
+        print('⚠️ No rides found in users/$uid/rides collection');
+      }
+      
+      final rides = snapshot.docs.map((doc) {
+        print('📄 Processing ride: ${doc.id}');
         final data = doc.data();
+        print('   Status: ${data['status']}');
+        print('   Request Time: ${data['requestTime']}');
         data['id'] = doc.id;
         return RideRequest.fromJson(data);
       }).toList();
+      
+      // Sort in memory instead of using Firestore orderBy
+      rides.sort((a, b) => b.requestTime.compareTo(a.requestTime));
+      
+      print('✅ Returning ${rides.length} sorted rides');
+      return rides;
+    }).handleError((error) {
+      print('❌ ERROR in listenToUserRides: $error');
+      return <RideRequest>[];
     });
   }
 
@@ -434,12 +455,14 @@ class RideRequestService {
       if (rideDoc.exists) {
         final userId = rideDoc.data()?['userId'];
         if (userId != null) {
+          print('🔄 Updating user ride collection: users/$userId/rides/$rideId');
           await _firestore
               .collection('users')
               .doc(userId)
               .collection('rides')
               .doc(rideId)
               .update(updateData);
+          print('✅ User ride collection updated');
         }
       }
       

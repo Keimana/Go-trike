@@ -87,6 +87,8 @@ class _MainScreenContentState extends State<MainScreenContent> {
   StreamSubscription<RideRequest?>? _rideStatusSubscription;
   StreamSubscription<List<RideRequest>>? _userRidesSubscription;
   bool _hasShownAcceptedModal = false;
+  bool _hasShownArrivedModal = false;
+  bool _isWaitingForDriverArrival = false; // NEW: Track if waiting for driver
 
   String? _distanceText;
   String? _durationText;
@@ -431,8 +433,13 @@ class _MainScreenContentState extends State<MainScreenContent> {
   }
 
   void _enableLocationPicking(LocationPickMode mode) {
-    if (_hasPendingRide) {
-      _showSnackBar('Cannot change locations while you have a pending ride request', Colors.orange);
+    if (_hasPendingRide || _isWaitingForDriverArrival) {
+      _showSnackBar(
+        _isWaitingForDriverArrival 
+          ? 'Please wait for your driver to arrive and complete your current ride first' 
+          : 'Cannot change locations while you have a pending ride request', 
+        Colors.orange
+      );
       return;
     }
 
@@ -562,6 +569,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
   void _startListeningToRideStatus(String rideId) {
     _activeRideId = rideId;
     _hasShownAcceptedModal = false;
+    _hasShownArrivedModal = false;
     _rideStatusSubscription?.cancel();
     
     _rideStatusSubscription = RideRequestService.listenToRideStatus(rideId).listen((rideRequest) {
@@ -582,6 +590,12 @@ class _MainScreenContentState extends State<MainScreenContent> {
         return;
       }
 
+      // Remove the automatic arrived modal - we're using manual check now
+      // if (rideRequest.status == RideStatus.arrived && !_hasShownArrivedModal) {
+      //   _handleDriverArrived(rideRequest);
+      //   return;
+      // }
+
       final isPending = rideRequest.status == RideStatus.pending;
       if (_hasPendingRide != isPending && mounted) {
         setState(() {
@@ -595,6 +609,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
     setState(() {
       _hasPendingRide = false;
       _activeRideId = null;
+      _isWaitingForDriverArrival = false; // Clear waiting state
     });
     _rideStatusSubscription?.cancel();
     _rideStatusSubscription = null;
@@ -605,6 +620,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
     setState(() {
       _hasPendingRide = false;
       _activeRideId = null;
+      _isWaitingForDriverArrival = false; // Clear waiting state
     });
     _rideStatusSubscription?.cancel();
     _rideStatusSubscription = null;
@@ -615,84 +631,260 @@ class _MainScreenContentState extends State<MainScreenContent> {
     _hasShownAcceptedModal = true;
     setState(() {
       _hasPendingRide = false;
-      _activeRideId = null;
+      _isWaitingForDriverArrival = true; // Set waiting state
     });
     showDriverOnWayModal(context, rideRequest.todaNumber ?? 'N/A');
-    _rideStatusSubscription?.cancel();
-    _rideStatusSubscription = null;
+    // After showing the original modal, start periodic arrival checks
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted && _activeRideId == rideRequest.id) {
+        _showPeriodicArrivalCheckDialog(rideRequest);
+      }
+    });
+    // Keep listening to ride status
   }
 
-  Future<void> _handleRideRequest() async {
-    if (_hasPendingRide) {
-      _showSnackBar('You already have a pending ride request', Colors.orange);
-      return;
-    }
-
-    final pickupLocation = _getPickupLocation();
-    if (pickupLocation == null) {
-      _showSnackBar('Please select a pickup location first', Colors.red);
-      return;
-    }
-
-    if (_selectedDestinationLocation == null) {
-      _showSnackBar('Please select a destination', Colors.red);
-      return;
-    }
-
-    final result = await showModalBottomSheet<RideRequest?>(
+  void _showPeriodicArrivalCheckDialog(RideRequest rideRequest) {
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.55,
-          minChildSize: 0.3,
-          maxChildSize: 0.9,
-          builder: (context, scrollController) {
-            return Container(
-              padding: const EdgeInsets.all(20),
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.pin_drop, color: Color(0xFF0097B2), size: 28),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Driver Status Check',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              child: RequestTrikePage(
-                userLocation: pickupLocation,
-                userAddress: _getPickupAddressText(),
-                destinationLocation: _selectedDestinationLocation,
-                destinationAddress: _getDestinationAddressText(),
-                precalculatedDistance: _distanceText,
-                precalculatedDuration: _durationText,
-                onRequestConfirmed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Has your driver arrived?',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
               ),
-            );
-          },
-        );
-      },
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'TODA Number: ${rideRequest.todaNumber ?? 'N/A'}',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              // Ask again after 30 seconds
+              Future.delayed(const Duration(seconds: 30), () {
+                if (mounted && _activeRideId == rideRequest.id) {
+                  _showPeriodicArrivalCheckDialog(rideRequest);
+                }
+              });
+            },
+            style: TextButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text(
+              'Not Yet',
+              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              _completeRide(rideRequest);
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF0097B2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text(
+              'Yes, Arrived',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _completeRide(RideRequest rideRequest) async {
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
     );
 
-    if (result != null && mounted) {
-      setState(() {
-        _hasPendingRide = true;
-        _activeRideId = result.id;
-      });
-      _startListeningToRideStatus(result.id);
+    final success = await RideRequestService.updateRideStatus(
+      rideRequest.id,
+      rideRequest.assignedTerminal.id,
+      RideStatus.completed,
+      todaNumber: rideRequest.todaNumber,
+    );
+
+    if (mounted) {
+      Navigator.of(context).pop(); // Close loading
+
+      if (success) {
+        setState(() {
+          _hasPendingRide = false;
+          _activeRideId = null;
+          _isWaitingForDriverArrival = false; // Clear waiting state
+        });
+        _rideStatusSubscription?.cancel();
+        _rideStatusSubscription = null;
+
+        _showRideCompletedDialog();
+      } else {
+        _showSnackBar('❌ Failed to complete ride', Colors.red);
+      }
     }
   }
 
-  LatLng? _getPickupLocation() {
-    return _useCurrentLocation ? _currentUserLocation : _selectedPickupLocation;
+  void _showRideCompletedDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle, color: Colors.green, size: 32),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Ride Completed!',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Your ride has been completed successfully!',
+              style: TextStyle(fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.green.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Column(
+                children: [
+                  Icon(Icons.history, color: Colors.green, size: 32),
+                  SizedBox(height: 8),
+                  Text(
+                    'This ride has been saved to your history logs.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _showSnackBar('✅ You can now request another ride', Colors.green);
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF0097B2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+            child: const Text(
+              'OK',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  String _getPickupAddressText() {
-    if (_useCurrentLocation) {
-      return _currentAddress ?? "Current Location";
-    } else {
-      return _selectedPickupAddress ?? "Selected Pickup";
-    }
+  void _showNoDriverAvailableDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.orange, size: 28),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'No Driver Available',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: const Text('Sorry, no drivers are available at the moment. Please try again later.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF0097B2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
   }
 
-  String _getDestinationAddressText() {
-    return _selectedDestinationAddress ?? "Selected Destination";
+  void _showRideCancelledDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.cancel, color: Colors.red, size: 28),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Ride Cancelled',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: const Text('Your ride has been cancelled. You can request another when ready.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF0097B2),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showSnackBar(String message, Color color) {
@@ -773,60 +965,82 @@ class _MainScreenContentState extends State<MainScreenContent> {
     );
   }
 
-  void _showNoDriverAvailableDialog() {
-    showDialog(
+  Future<void> _handleRideRequest() async {
+    if (_hasPendingRide) {
+      _showSnackBar('You already have a pending ride request', Colors.orange);
+      return;
+    }
+
+    if (_isWaitingForDriverArrival) {
+      _showSnackBar('Please wait for your driver to arrive and complete your current ride first', Colors.orange);
+      return;
+    }
+
+    final pickupLocation = _getPickupLocation();
+    if (pickupLocation == null) {
+      _showSnackBar('Please select a pickup location first', Colors.red);
+      return;
+    }
+
+    if (_selectedDestinationLocation == null) {
+      _showSnackBar('Please select a destination', Colors.red);
+      return;
+    }
+
+    final result = await showModalBottomSheet<RideRequest?>(
       context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.warning, color: Colors.orange, size: 28),
-            SizedBox(width: 12),
-            Text('No Driver Available', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: const Text('Sorry, no drivers available. Please try again later.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFF0097B2),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: RequestTrikePage(
+                userLocation: pickupLocation,
+                userAddress: _getPickupAddressText(),
+                destinationLocation: _selectedDestinationLocation,
+                destinationAddress: _getDestinationAddressText(),
+                precalculatedDistance: _distanceText,
+                precalculatedDuration: _durationText,
+                onRequestConfirmed: () => Navigator.of(context).pop(),
+              ),
+            );
+          },
+        );
+      },
     );
+
+    if (result != null && mounted) {
+      setState(() {
+        _hasPendingRide = true;
+        _activeRideId = result.id;
+      });
+      _startListeningToRideStatus(result.id);
+    }
   }
 
-  void _showRideCancelledDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.cancel, color: Colors.red, size: 28),
-            SizedBox(width: 12),
-            Text('Ride Cancelled', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: const Text('Your ride has been cancelled. You can request another when ready.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFF0097B2),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
-            child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-          ),
-        ],
-      ),
-    );
+  LatLng? _getPickupLocation() {
+    return _useCurrentLocation ? _currentUserLocation : _selectedPickupLocation;
+  }
+
+  String _getPickupAddressText() {
+    if (_useCurrentLocation) {
+      return _currentAddress ?? "Current Location";
+    } else {
+      return _selectedPickupAddress ?? "Selected Pickup";
+    }
+  }
+
+  String _getDestinationAddressText() {
+    return _selectedDestinationAddress ?? "Select Destination";
   }
 
   @override
@@ -837,7 +1051,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
 
     final hasPickup = _useCurrentLocation ? _currentUserLocation != null : _selectedPickupLocation != null;
     final hasDestination = _selectedDestinationLocation != null;
-    final canRequestRide = hasPickup && hasDestination && !_hasPendingRide;
+    final canRequestRide = hasPickup && hasDestination && !_hasPendingRide && !_isWaitingForDriverArrival;
 
     return Stack(
       children: [
