@@ -347,7 +347,10 @@ class ActivityLogsScreen extends StatelessWidget {
                                             context,
                                             MaterialPageRoute(
                                               builder: (context) => ReportTodaScreen(
+                                                rideId: ride.id,
                                                 toda: ride.todaNumber ?? "N/A",
+                                                userAddress: ride.userAddress,
+                                                destinationAddress: ride.destinationAddress,
                                               ),
                                             ),
                                           );
