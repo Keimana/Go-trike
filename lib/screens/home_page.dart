@@ -271,7 +271,6 @@ class _MainScreenContentState extends State<MainScreenContent> {
         location.longitude <= _telabastaganBounds.northeast.longitude;
   }
 
-  // Reverse geocoding function to get address from coordinates
   Future<String?> _reverseGeocode(LatLng location) async {
     try {
       final String apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
@@ -283,24 +282,14 @@ class _MainScreenContentState extends State<MainScreenContent> {
       final String url = 'https://maps.googleapis.com/maps/api/geocode/json?'
           'latlng=${location.latitude},${location.longitude}&key=$apiKey';
 
-      debugPrint('Reverse geocoding URL: $url');
-
       final response = await http.get(Uri.parse(url));
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
-        debugPrint('Geocoding response status: ${data['status']}');
         
         if (data['status'] == 'OK' && data['results'].isNotEmpty) {
-          final address = data['results'][0]['formatted_address'];
-          debugPrint('Found address: $address');
-          return address;
-        } else {
-          debugPrint('Geocoding failed with status: ${data['status']}');
-          debugPrint('Results length: ${data['results']?.length ?? 0}');
+          return data['results'][0]['formatted_address'];
         }
-      } else {
-        debugPrint('HTTP error: ${response.statusCode}');
       }
       return null;
     } catch (e) {
@@ -309,26 +298,19 @@ class _MainScreenContentState extends State<MainScreenContent> {
     }
   }
 
-  // Fallback method to create readable address from coordinates
   String _createFallbackAddress(LatLng location) {
-    // Since we're in Telabastagan area, we can create a descriptive address
     final double lat = location.latitude;
-    final double lng = location.longitude;
-    
-    // Create relative position descriptions for Telabastagan
     String area = "Telabastagan";
     
-    // Add more specific area based on coordinates if needed
     if (lat > 15.117) {
       area = "North $area";
     } else if (lat < 15.116) {
       area = "South $area";
     }
     
-    return "$area (${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})";
+    return "$area (${lat.toStringAsFixed(4)}, ${location.longitude.toStringAsFixed(4)})";
   }
 
-  // Get a shorter, more readable address
   Future<String> _getReadableAddress(LatLng location) async {
     try {
       final fullAddress = await _reverseGeocode(location);
@@ -337,14 +319,10 @@ class _MainScreenContentState extends State<MainScreenContent> {
         return _createFallbackAddress(location);
       }
 
-      // Extract a shorter, more user-friendly address
       final parts = fullAddress.split(',');
       
-      // For Telabastagan area, try to get the most relevant parts
       if (parts.length >= 2) {
-        // Check if it's in Telabastagan area and format accordingly
         if (fullAddress.toLowerCase().contains('telabastagan')) {
-          // Return street + Telabastagan
           for (int i = 0; i < parts.length; i++) {
             if (parts[i].toLowerCase().contains('telabastagan')) {
               if (i > 0) {
@@ -355,8 +333,6 @@ class _MainScreenContentState extends State<MainScreenContent> {
             }
           }
         }
-        
-        // General case: return first two parts
         return '${parts[0].trim()}, ${parts[1].trim()}';
       }
       
@@ -398,7 +374,6 @@ class _MainScreenContentState extends State<MainScreenContent> {
         });
       }
 
-      // Get readable address for current location
       final address = await _getReadableAddress(currentLocation);
       if (mounted) {
         setState(() {
@@ -424,7 +399,6 @@ class _MainScreenContentState extends State<MainScreenContent> {
       return;
     }
 
-    // Show loading for address
     if (_pickMode == LocationPickMode.pickup) {
       setState(() {
         _selectedPickupAddress = "Getting address...";
@@ -435,7 +409,6 @@ class _MainScreenContentState extends State<MainScreenContent> {
       });
     }
 
-    // Get readable address for the tapped location
     final address = await _getReadableAddress(tappedLocation);
 
     if (mounted) {
@@ -458,6 +431,11 @@ class _MainScreenContentState extends State<MainScreenContent> {
   }
 
   void _enableLocationPicking(LocationPickMode mode) {
+    if (_hasPendingRide) {
+      _showSnackBar('Cannot change locations while you have a pending ride request', Colors.orange);
+      return;
+    }
+
     setState(() {
       _pickMode = mode;
       if (mode == LocationPickMode.pickup) {
@@ -645,58 +623,52 @@ class _MainScreenContentState extends State<MainScreenContent> {
   }
 
   Future<void> _handleRideRequest() async {
-  if (_hasPendingRide) {
-    _showSnackBar('You already have a pending ride request', Colors.orange);
-    return;
-  }
+    if (_hasPendingRide) {
+      _showSnackBar('You already have a pending ride request', Colors.orange);
+      return;
+    }
 
-  final pickupLocation = _getPickupLocation();
-  if (pickupLocation == null) {
-    _showSnackBar('Please select a pickup location first', Colors.red);
-    return;
-  }
+    final pickupLocation = _getPickupLocation();
+    if (pickupLocation == null) {
+      _showSnackBar('Please select a pickup location first', Colors.red);
+      return;
+    }
 
-  if (_selectedDestinationLocation == null) {
-    _showSnackBar('Please select a destination', Colors.red);
-    return;
-  }
+    if (_selectedDestinationLocation == null) {
+      _showSnackBar('Please select a destination', Colors.red);
+      return;
+    }
 
-  // ← ADD THESE DEBUG PRINTS
-  print('=== HOME PAGE VALUES ===');
-  print('Distance: $_distanceText');
-  print('Duration: $_durationText');
-  print('========================');
-
-  final result = await showModalBottomSheet<RideRequest?>(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.transparent,
-    builder: (context) {
-      return DraggableScrollableSheet(
-        initialChildSize: 0.55,
-        minChildSize: 0.3,
-        maxChildSize: 0.9,
-        builder: (context, scrollController) {
-          return Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            ),
-            child: RequestTrikePage(
-              userLocation: pickupLocation,
-              userAddress: _getPickupAddressText(),
-              destinationLocation: _selectedDestinationLocation,
-              destinationAddress: _getDestinationAddressText(),
-              precalculatedDistance: _distanceText,
-              precalculatedDuration: _durationText,
-              onRequestConfirmed: () => Navigator.of(context).pop(),
-            ),
-          );
-        },
-      );
-    },
-  );
+    final result = await showModalBottomSheet<RideRequest?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.55,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: RequestTrikePage(
+                userLocation: pickupLocation,
+                userAddress: _getPickupAddressText(),
+                destinationLocation: _selectedDestinationLocation,
+                destinationAddress: _getDestinationAddressText(),
+                precalculatedDistance: _distanceText,
+                precalculatedDuration: _durationText,
+                onRequestConfirmed: () => Navigator.of(context).pop(),
+              ),
+            );
+          },
+        );
+      },
+    );
 
     if (result != null && mounted) {
       setState(() {
@@ -894,48 +866,51 @@ class _MainScreenContentState extends State<MainScreenContent> {
             child: Column(
               children: [
                 GestureDetector(
-                  onTap: () => _enableLocationPicking(LocationPickMode.destination),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _selectedDestinationLocation != null ? Colors.red.withOpacity(0.05) : Colors.grey[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: _pickMode == LocationPickMode.destination ? Colors.red : Colors.transparent,
-                        width: 2,
+                  onTap: _hasPendingRide ? null : () => _enableLocationPicking(LocationPickMode.destination),
+                  child: Opacity(
+                    opacity: _hasPendingRide ? 0.5 : 1.0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: _selectedDestinationLocation != null ? Colors.red.withOpacity(0.05) : Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _pickMode == LocationPickMode.destination ? Colors.red : Colors.transparent,
+                          width: 2,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)),
-                          child: const Icon(Icons.location_on, color: Colors.white, size: 16),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text('Destination', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
-                              Text(
-                                _getDestinationAddressText(),
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: _selectedDestinationLocation != null ? Colors.black : Colors.grey[400],
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ],
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(8)),
+                            child: const Icon(Icons.location_on, color: Colors.white, size: 16),
                           ),
-                        ),
-                        Icon(
-                          _selectedDestinationLocation != null ? Icons.check_circle : Icons.add_circle_outline,
-                          size: 20,
-                          color: _selectedDestinationLocation != null ? Colors.green : const Color(0xFF0097B2),
-                        ),
-                      ],
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('Destination', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
+                                Text(
+                                  _getDestinationAddressText(),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: _selectedDestinationLocation != null ? Colors.black : Colors.grey[400],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            _selectedDestinationLocation != null ? Icons.check_circle : Icons.add_circle_outline,
+                            size: 20,
+                            color: _selectedDestinationLocation != null ? Colors.green : const Color(0xFF0097B2),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),

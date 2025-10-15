@@ -10,7 +10,7 @@ import 'distance_matrix_service.dart';
 
 class RideRequestService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  static const int TERMINAL_TIMEOUT_SECONDS = 60;
+  static const int TERMINAL_TIMEOUT_SECONDS = 20;
   static final String _apiKey = dotenv.env['GOOGLE_MAPS_API_KEY'] ?? '';
   static const String _baseUrl = 'https://maps.googleapis.com/maps/api/distancematrix/json';
 

@@ -108,6 +108,7 @@ flutter:
     - assets/icons/terminal.png
     - assets/icons/fullscreen.svg
     - assets/icons/person_search.svg
+    - .env
 
   fonts:
     - family: Roboto
