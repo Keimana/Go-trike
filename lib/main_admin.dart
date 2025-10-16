@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens - admin/signin_admin.dart';
 import 'screens - admin/dashboard_admin.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print('Firebase initialized successfully');
+  } catch (e) {
+    print('Firebase initialization error: $e');
+  }
+  
   runApp(const AdminApp());
 }
 

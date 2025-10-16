@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../widgets/card_builder_admin.dart';
 import '../widgets/admin_dashboard_modals.dart';
+import '../services/admin_service.dart';
 
 void main() => runApp(const UiAdminSideReports());
 
@@ -32,12 +33,22 @@ class UiAdminDashboard extends StatefulWidget {
 class _UiAdminDashboardState extends State<UiAdminDashboard> {
   late Timer _timer;
   String _formattedDate = "";
+  final ScrollController _scrollController = ScrollController();
+  bool _isScrolled = false;
 
   @override
   void initState() {
     super.initState();
     _updateTime();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _updateTime());
+    
+    _scrollController.addListener(() {
+      if (_scrollController.offset > 20 && !_isScrolled) {
+        setState(() => _isScrolled = true);
+      } else if (_scrollController.offset <= 20 && _isScrolled) {
+        setState(() => _isScrolled = false);
+      }
+    });
   }
 
   void _updateTime() {
@@ -49,6 +60,7 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
   @override
   void dispose() {
     _timer.cancel();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -70,159 +82,168 @@ class _UiAdminDashboardState extends State<UiAdminDashboard> {
     );
   }
 
-@override
-Widget build(BuildContext context) {
-  final screenWidth = MediaQuery.of(context).size.width;
+  void _refreshData() {
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Data refreshed'),
+        backgroundColor: Colors.green[600],
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+    );
+  }
 
-  // ✅ Define breakpoints
-  final bool isDesktop = screenWidth > 1200;
-  final bool isTablet = screenWidth > 700 && screenWidth <= 1200;
-  final bool isMobile = screenWidth <= 700;
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isDesktop = screenWidth > 1200;
+    final bool isTablet = screenWidth > 700 && screenWidth <= 1200;
 
-  return Scaffold(
-    body: SafeArea(
-      child: Padding(
-        // ✅ Responsive horizontal padding
-        padding: EdgeInsets.symmetric(
-          horizontal: isDesktop ? 200 : isTablet ? 80 : 16,
-          vertical: 20,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // HEADER
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const GoTrike(),
-                _buildDateTimeCard(),
-              ],
-            ),
-            const SizedBox(height: 40),
-
-            // ✅ Responsive grid
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  if (isMobile) return _buildSingleColumn();
-
-                  // Adjust number of columns and card height dynamically
-                  return GridView.count(
-                    crossAxisCount: isDesktop ? 2 : 1,
-                    crossAxisSpacing: 50,
-                    mainAxisSpacing: 50,
-                    childAspectRatio: isDesktop
-                        ? 1.7
-                        : isTablet
-                            ? 1.8
-                            : 1.2,
-                    children: [
-                      _buildCard(
-                        title: "Reports",
-                        content: const ReportsContent(minimal: true),
-                        full: const ReportsContent(minimal: false),
-                      ),
-                      _buildCard(
-                        title: "Activity Logs",
-                        content: const ActivityLogsContent(minimal: true),
-                        full: const ActivityLogsContent(minimal: false),
-                      ),
-                      _buildCard(
-                        title: "Ride History",
-                        content: const RideHistoryContent(minimal: true),
-                        full: const RideHistoryContent(minimal: false),
-                      ),
-                      _buildCard(
-                        title: "Account and Terminal Control",
-                        content: const AccountControlContent(minimal: true),
-                        full: const AccountControlContent(minimal: false),
-                      ),
-                      _buildCard(
-                        title: "User List",
-                        content: const UserListContent(minimal: true),
-                        full: const UserListContent(minimal: false),
-                      ),
-                      _buildCard(
-                        title: "Trike Driver List",
-                        content: const TrikeDriverListContent(minimal: true),
-                        full: const TrikeDriverListContent(minimal: false),
-                      ),
-
-                    ],
-                  );
-                },
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: _refreshData,
+        backgroundColor: const Color(0xFF892CDD),
+        foregroundColor: Colors.white,
+        child: const Icon(Icons.refresh_rounded),
+      ),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 200 : isTablet ? 80 : 16,
+            vertical: 20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                padding: const EdgeInsets.only(bottom: 10),
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: Colors.grey.withOpacity(_isScrolled ? 0.1 : 0),
+                      width: 1,
+                    ),
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const GoTrike(),
+                    _buildDateTimeCard(),
+                  ],
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 30),
+              
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async {
+                    _refreshData();
+                    await Future.delayed(const Duration(seconds: 1));
+                  },
+                  child: ListView.separated(
+                    controller: _scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    itemCount: 6,
+                    separatorBuilder: (_, __) => const SizedBox(height: 20),
+                    itemBuilder: (context, index) {
+                      return _buildCardItem(index);
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
-
-Widget _buildSingleColumn() {
-  final cards = [
-    ("Reports", const ReportsContent(minimal: true),
-        const ReportsContent(minimal: false)),
-    ("Activity Logs", const ActivityLogsContent(minimal: true),
-        const ActivityLogsContent(minimal: false)),
-    ("Ride History", const RideHistoryContent(minimal: true),
-        const RideHistoryContent(minimal: false)),
-    ("Account and Terminal Control",
+  Widget _buildCardItem(int index) {
+    final cards = [
+      (
+        "Reports",
+        const ReportsContent(minimal: true),
+        const ReportsContent(minimal: false),
+      ),
+      (
+        "Activity Logs", 
+        const ActivityLogsContent(minimal: true),
+        const ActivityLogsContent(minimal: false),
+      ),
+      (
+        "Ride History",
+        const RideHistoryContent(minimal: true),
+        const RideHistoryContent(minimal: false),
+      ),
+      (
+        "Account and Terminal Control",
         const AccountControlContent(minimal: true),
-        const AccountControlContent(minimal: false)),
-    ("User List", const UserListContent(minimal: true),
-        const UserListContent(minimal: false)),
-    ("Trike Driver List", const TrikeDriverListContent(minimal: true),
-        const TrikeDriverListContent(minimal: false)),
-  ];
+        const AccountControlContent(minimal: false),
+      ),
+      (
+        "User List",
+        const UserListContent(minimal: true),
+        const UserListContent(minimal: false),
+      ),
+      (
+        "Trike Driver List",
+        const TrikeDriverListContent(minimal: true),
+        const TrikeDriverListContent(minimal: false),
+      ),
+    ];
 
-  return ListView.separated(
-    itemCount: cards.length, // ✅ Now includes all 6 cards
-    separatorBuilder: (_, __) => const SizedBox(height: 20),
-    itemBuilder: (context, i) {
-      return _buildCard(
-        title: cards[i].$1,
-        content: cards[i].$2,
-        full: cards[i].$3,
-      );
-    },
-  );
-}
-
+    final card = cards[index];
+    return _buildCard(
+      title: card.$1,
+      content: card.$2,
+      full: card.$3,
+    );
+  }
 
   Widget _buildCard({
     required String title,
     required Widget content,
     required Widget full,
   }) {
-    return AdminCard(
-      title: title,
-      titleColor:
-          title == "Reports" ? const Color(0xFF323232) : const Color(0xFF323232),
-
-      child: content,
-      onFullscreenTap: () => _openModal(title, full),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () => _openModal(title, full),
+        child: AdminCard(
+          title: title,
+          titleColor: const Color(0xFF323232),
+          child: content,
+          onFullscreenTap: () => _openModal(title, full),
+        ),
+      ),
     );
   }
 
-  Widget _buildDateTimeCard() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 20),
+  Widget _buildDateTimeCard() => AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+              color: Colors.black.withOpacity(_isScrolled ? 0.08 : 0.05),
+              blurRadius: _isScrolled ? 12 : 8,
+              offset: Offset(0, _isScrolled ? 4 : 3),
             ),
           ],
         ),
-        child: Text(
-          _formattedDate,
-          style: const TextStyle(fontSize: 16, color: Color(0xFF323232)),
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 300),
+          style: TextStyle(
+            fontSize: _isScrolled ? 14 : 16,
+            color: const Color(0xFF323232),
+            fontWeight: _isScrolled ? FontWeight.w500 : FontWeight.normal,
+          ),
+          child: Text(_formattedDate),
         ),
       );
 }
@@ -232,590 +253,499 @@ class GoTrike extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: const [
-        Text.rich(
-          TextSpan(
-            children: [
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: () {},
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            Text.rich(
               TextSpan(
-                text: 'Go',
-                style: TextStyle(
-                  color: Color(0xFF892CDD),
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                ),
+                children: [
+                  TextSpan(
+                    text: 'Go',
+                    style: TextStyle(
+                      color: Color(0xFF892CDD),
+                      fontSize: 32,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  TextSpan(text: ' '),
+                  TextSpan(
+                    text: 'Trike',
+                    style: TextStyle(
+                      color: Color(0xFFFF9500),
+                      fontSize: 32,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
-              TextSpan(text: ' '),
-              TextSpan(
-                text: 'Trike',
-                style: TextStyle(
-                  color: Color(0xFFFF9500),
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                ),
+            ),
+            SizedBox(height: 4),
+            Text(
+              'Admin Dashboard',
+              style: TextStyle(
+                fontSize: 50,
+                fontWeight: FontWeight.bold,
+                color: Color.fromARGB(255, 0, 0, 0),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
-        SizedBox(height: 4),
-        Text(
-          'Admin Dashboard',
-          style: TextStyle(
-            fontSize: 50, // ✅ Slightly bigger
-            fontWeight: FontWeight.bold,
-            color: Color.fromARGB(255, 0, 0, 0),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
 
-
-// ---------------- Reports Modal ----------------
+// ============ REPORTS CONTENT ============
 class ReportsContent extends StatelessWidget {
   final bool minimal;
   const ReportsContent({super.key, this.minimal = false});
 
-  final List<Map<String, String>> _reports = const [
-    {
-      "date": "Aug 3, 2025",
-      "time": "4:40 PM",
-      "cause": "Reckless Driving",
-      "reporter": "User123",
-      "reportedToda": "Toda 43"
-    },
-    {
-      "date": "Aug 3, 2025",
-      "time": "4:40 PM",
-      "cause": "Reckless Driving",
-      "reporter": "User123",
-      "reportedToda": "Toda 43"
-    },
-    {
-      "date": "Aug 3, 2025",
-      "time": "4:40 PM",
-      "cause": "Reckless Driving",
-      "reporter": "User123",
-      "reportedToda": "Toda 43"
-    },
-    {
-      "date": "Aug 3, 2025",
-      "time": "4:40 PM",
-      "cause": "Reckless Driving",
-      "reporter": "User123",
-      "reportedToda": "Toda 43"
-    },
-    {
-      "date": "Aug 3, 2025",
-      "time": "4:40 PM",
-      "cause": "Reckless Driving",
-      "reporter": "User123",
-      "reportedToda": "Toda 43"
-    },
-    {
-      "date": "Aug 3, 2025",
-      "time": "4:40 PM",
-      "cause": "Reckless Driving",
-      "reporter": "User123",
-      "reportedToda": "Toda 43"
-    },
-    {
-      "date": "Aug 3, 2025",
-      "time": "4:40 PM",
-      "cause": "Reckless Driving",
-      "reporter": "User123",
-      "reportedToda": "Toda 43"
-    },
-    {
-      "date": "Aug 3, 2025",
-      "time": "4:40 PM",
-      "cause": "Reckless Driving",
-      "reporter": "User123",
-      "reportedToda": "Toda 43"
-    },
-    {
-      "date": "Aug 3, 2025",
-      "time": "4:40 PM",
-      "cause": "Reckless Driving",
-      "reporter": "User123",
-      "reportedToda": "Toda 43"
-    },
-    {
-      "date": "Aug 3, 2025",
-      "time": "4:40 PM",
-      "cause": "Reckless Driving",
-      "reporter": "User123",
-      "reportedToda": "Toda 43"
-    },
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<AdminReport>>(
+      stream: AdminService.listenToAllReports(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LoadingWidget(message: 'Loading reports...');
+        }
 
+        if (snapshot.hasError) {
+          return _buildErrorWidget('Reports');
+        }
 
-    
-  ];
+        final reports = snapshot.data ?? [];
+        final displayReports = minimal ? reports.take(5).toList() : reports;
 
-@override
-Widget build(BuildContext context) {
-  final reports = minimal ? _reports.take(5).toList() : _reports;
+        if (displayReports.isEmpty) {
+          return const _EmptyStateWidget(message: 'No reports yet');
+        }
 
-  return Container(
-    padding: const EdgeInsets.all(15),
-    child: SingleChildScrollView( // ✅ Added scrollable wrapper
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 12),
-          _buildTableHeader(),
-          const SizedBox(height: 8),
-          ...List.generate(reports.length, (index) {
-            final r = reports[index];
-            final isGray = index % 2 == 0;
-            return Container(
-              color: isGray ? const Color(0xFFF9F9F9) : Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  _cell(r["date"]!, flex: 2),
-                  _cell(r["cause"]!, flex: 3),
-                  _cell(r["reporter"]!, flex: 2),
-                ],
-              ),
-            );
-          }),
-          if (minimal)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-            ),
-        ],
-      ),
-    ),
-  );
+        return _buildDataTable(
+          headers: const [
+            _HeaderConfig('Date', flex: 2),
+            _HeaderConfig('Issues', flex: 3),
+            _HeaderConfig('Comments', flex: 2),
+            _HeaderConfig('Reporter', flex: 2),
+          ],
+          rows: displayReports,
+          builder: (report, index) => [
+            _buildCell(DateFormat('MMM d, yyyy').format(report.reportTime), flex: 2),
+            _buildCell(report.cause, flex: 3, maxLines: 2),
+            _buildCell(report.additionalComments ?? 'No additional comments', flex: 2, maxLines: 2),
+            _buildCell(report.reporter, flex: 2),
+          ],
+        );
+      },
+    );
+  }
 }
 
-Widget _buildTableHeader() {
-  return Row(children: const [
-    Expanded(flex: 2, child: Center(child: Text('Date', style: _headerStyle))),
-    Expanded(flex: 3, child: Center(child: Text('Cause', style: _headerStyle))),
-    Expanded(flex: 2, child: Center(child: Text('Reporter', style: _headerStyle))),
-  ]);
-}
-
-
-  static const _headerStyle = TextStyle(
-      fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF323232));
-
-Widget _cell(String text, {int flex = 1}) {
-  return Expanded(
-    flex: flex,
-    child: Center(
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 15, color: Color(0xFF323232)),
-        maxLines: 1, // ✅ limit to 1 line only
-        overflow: TextOverflow.ellipsis, // ✅ add "..." when it’s too long
-        softWrap: false, // ✅ prevent wrapping
-      ),
-    ),
-  );
-}
-}
-
-// ---------------- Activity Logs ----------------
+// ============ ACTIVITY LOGS CONTENT ============
 class ActivityLogsContent extends StatelessWidget {
   final bool minimal;
   const ActivityLogsContent({super.key, this.minimal = false});
 
-  final List<Map<String, dynamic>> logs = const [
-    {"name": "Toda 43", "accepted": 5, "rejected": 2},
-    {"name": "Toda 43", "accepted": 5, "rejected": 2},
-    {"name": "Toda 43", "accepted": 5, "rejected": 2},
-    {"name": "Toda 43", "accepted": 5, "rejected": 2},
-    {"name": "Toda 43", "accepted": 5, "rejected": 2},
-  ];
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<TodaActivityLog>>(
+      stream: AdminService.listenToActivityLogs(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LoadingWidget(message: 'Loading activity logs...');
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorWidget('Activity Logs');
+        }
+
+        final logs = snapshot.data ?? [];
+        final displayLogs = minimal ? logs.take(5).toList() : logs;
+
+        if (displayLogs.isEmpty) {
+          return const _EmptyStateWidget(message: 'No activity logs yet');
+        }
+
+        return _buildDataTable(
+          headers: const [
+            _HeaderConfig('Toda', flex: 3),
+            _HeaderConfig('Accepted', flex: 2),
+            _HeaderConfig('Rejected', flex: 2),
+          ],
+          rows: displayLogs,
+          builder: (log, index) => [
+            _buildCell(log.todaName, flex: 3),
+            _buildCell(log.accepted.toString(), flex: 2, isNumber: true),
+            _buildCell(log.rejected.toString(), flex: 2, isNumber: true),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ============ RIDE HISTORY CONTENT ============
+class RideHistoryContent extends StatelessWidget {
+  final bool minimal;
+  const RideHistoryContent({super.key, this.minimal = false});
 
   @override
   Widget build(BuildContext context) {
-    final data = minimal ? logs.take(5).toList() : logs;
+    return StreamBuilder<List<RideHistoryEntry>>(
+      stream: AdminService.listenToRideHistory(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return _buildIndexErrorWidget();
+        }
 
-    return Container(
-      padding: const EdgeInsets.all(15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 12),
-          _headerRow(),
-          const SizedBox(height: 8),
-          ...List.generate(data.length, (index) {
-            final log = data[index];
-            final isGray = index % 2 == 0;
-            return Container(
-              color: isGray ? const Color(0xFFF9F9F9) : Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  _cell(log["name"].toString(), flex: 3, align: TextAlign.center),
-                  _cell(log["accepted"].toString(), flex: 2, align: TextAlign.center),
-                  _cell(log["rejected"].toString(), flex: 2, align: TextAlign.center),
-                ],
-              ),
-            );
-          }),
-          if (minimal) const SizedBox(height: 8),
-        ],
-      ),
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LoadingWidget(message: 'Loading ride history...');
+        }
+
+        final rides = snapshot.data ?? [];
+        final displayRides = minimal ? rides.take(5).toList() : rides;
+
+        if (displayRides.isEmpty) {
+          return const _EmptyStateWidget(message: 'No completed rides yet');
+        }
+
+        return _buildDataTable(
+          headers: const [
+            _HeaderConfig('Rider', flex: 3),
+            _HeaderConfig('Price', flex: 2),
+          ],
+          rows: displayRides,
+          builder: (ride, index) => [
+            _buildCell(ride.riderName, flex: 3),
+            _buildCell('₱${ride.price.toStringAsFixed(2)}', flex: 2, isNumber: true),
+          ],
+        );
+      },
     );
   }
+}
 
-  Widget _headerRow() {
-    return Row(children: const [
-      Expanded(
-        flex: 3,
-        child: Center(child: Text('Toda', style: _headerStyle)),
-      ),
-      Expanded(
-        flex: 2,
-        child: Center(child: Text('Accepted', style: _headerStyle)),
-      ),
-      Expanded(
-        flex: 2,
-        child: Center(child: Text('Rejected', style: _headerStyle)),
-      ),
-    ]);
+// ============ ACCOUNT CONTROL CONTENT ============
+class AccountControlContent extends StatelessWidget {
+  final bool minimal;
+  const AccountControlContent({super.key, this.minimal = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<AdminActivity>>(
+      stream: AdminService.listenToAdminActivities(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LoadingWidget(message: 'Loading admin activities...');
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorWidget('Admin Activities');
+        }
+
+        final activities = snapshot.data ?? [];
+        final displayActivities = minimal ? activities.take(5).toList() : activities;
+
+        if (displayActivities.isEmpty) {
+          return const _EmptyStateWidget(message: 'No admin activities yet');
+        }
+
+        return _buildDataTable(
+          headers: const [
+            _HeaderConfig('Date', flex: 2),
+            _HeaderConfig('Activity', flex: 4),
+          ],
+          rows: displayActivities,
+          builder: (activity, index) => [
+            _buildCell(DateFormat('MMM d, yyyy').format(activity.date), flex: 2),
+            _buildCell(activity.activity, flex: 4, maxLines: 2),
+          ],
+        );
+      },
+    );
   }
+}
 
-  static const _headerStyle = TextStyle(
-    fontSize: 18,
-    fontWeight: FontWeight.bold,
-    color: Color(0xFF323232),
-  );
+// ============ USER LIST CONTENT ============
+class UserListContent extends StatelessWidget {
+  final bool minimal;
+  const UserListContent({super.key, this.minimal = false});
 
-  Widget _cell(String text, {int flex = 1, TextAlign align = TextAlign.center}) {
-    return Expanded(
-      flex: flex,
-      child: Center(
-        child: Text(
-          text,
-          textAlign: align,
-          style: const TextStyle(fontSize: 15, color: Color(0xFF323232)),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          softWrap: false,
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<UserEntry>>(
+      stream: AdminService.listenToUsers(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LoadingWidget(message: 'Loading users...');
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorWidget('User List');
+        }
+
+        final users = snapshot.data ?? [];
+        final displayUsers = minimal ? users.take(5).toList() : users;
+
+        if (displayUsers.isEmpty) {
+          return const _EmptyStateWidget(message: 'No users yet');
+        }
+
+        return _buildDataTable(
+          headers: const [
+            _HeaderConfig('Name', flex: 3),
+            _HeaderConfig('Email', flex: 4),
+            _HeaderConfig('Status', flex: 2),
+          ],
+          rows: displayUsers,
+          builder: (user, index) => [
+            _buildCell(user.name, flex: 3),
+            _buildCell(user.email, flex: 4),
+            _buildCell(
+              user.status,
+              flex: 2,
+              textColor: user.status == 'Active' ? Colors.green : Colors.orange,
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ============ TRIKE DRIVER LIST CONTENT ============
+class TrikeDriverListContent extends StatelessWidget {
+  final bool minimal;
+  const TrikeDriverListContent({super.key, this.minimal = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<List<DriverEntry>>(
+      stream: AdminService.listenToDrivers(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _LoadingWidget(message: 'Loading drivers...');
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorWidget('Driver List');
+        }
+
+        final drivers = snapshot.data ?? [];
+        final displayDrivers = minimal ? drivers.take(5).toList() : drivers;
+
+        if (displayDrivers.isEmpty) {
+          return const _EmptyStateWidget(message: 'No drivers yet');
+        }
+
+        return _buildDataTable(
+          headers: const [
+            _HeaderConfig('Driver', flex: 3),
+            _HeaderConfig('Toda', flex: 3),
+          ],
+          rows: displayDrivers,
+          builder: (driver, index) => [
+            _buildCell(driver.name, flex: 3),
+            _buildCell(driver.todaNumber, flex: 3),
+          ],
+        );
+      },
+    );
+  }
+}
+
+// ============ REUSABLE UI COMPONENTS ============
+
+class _LoadingWidget extends StatelessWidget {
+  final String message;
+  const _LoadingWidget({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation(Color(0xFF892CDD)),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-// ---------------- Ride History ----------------
-class RideHistoryContent extends StatelessWidget {
-  final bool minimal;
-  const RideHistoryContent({super.key, this.minimal = false});
-
-  final List<Map<String, String>> rides = const [
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-    {"name": "Toda 1", "pickup": "Station A", "dropoff": "Station B", "price": "₱15.00"},
-
-
-
-  ];
+class _EmptyStateWidget extends StatelessWidget {
+  final String message;
+  const _EmptyStateWidget({required this.message});
 
   @override
-Widget build(BuildContext context) {
-  final data = minimal ? rides.take(5).toList() : rides;
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const SizedBox(height: 16),
+            Text(
+              message,
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
+class _HeaderConfig {
+  final String text;
+  final int flex;
+  const _HeaderConfig(this.text, {required this.flex});
+}
+
+Widget _buildDataTable<T>({
+  required List<_HeaderConfig> headers,
+  required List<T> rows,
+  required List<Widget> Function(T item, int index) builder,
+}) {
   return Container(
-    padding: const EdgeInsets.all(15),
+    padding: const EdgeInsets.all(16),
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const SizedBox(height: 12),
-        Row(children: const [
-          Expanded(
-            flex: 3,
-            child: Center(
-              child: Text('Rider', style: _headerStyle),
-            ),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
           ),
-          Expanded(
-            flex: 2,
-            child: Center(
-              child: Text('Price', style: _headerStyle),
-            ),
+          child: Row(
+            children: headers.map((header) => 
+              Expanded(
+                flex: header.flex,
+                child: Center(
+                  child: Text(
+                    header.text,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF323232),
+                    ),
+                  ),
+                ),
+              ),
+            ).toList(),
           ),
-        ]),
-        ...List.generate(data.length, (index) {
-          final ride = data[index];
+        ),
+        ...List.generate(rows.length, (index) {
+          final row = rows[index];
           final isGray = index % 2 == 0;
           return Container(
             color: isGray ? const Color(0xFFF9F9F9) : Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 8),
+            padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
-              children: [
-                _cell(ride["name"]!, flex: 3),
-                _cell(ride["price"]!, flex: 2),
-              ],
+              children: builder(row, index),
             ),
           );
         }),
-        if (minimal)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            
-          ),
       ],
     ),
   );
 }
 
-
-  static const _headerStyle = TextStyle(
-      fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF323232));
-
-Widget _cell(String text, {int flex = 1}) {
-  return Expanded(
-    flex: flex,
-    child: Center( // ✅ This ensures true center alignment horizontally
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 15, color: Color(0xFF323232)),
-      ),
-    ),
-  );
-}
-}
-
-// ---------------- Account Control ----------------
-class AccountControlContent extends StatelessWidget {
-  final bool minimal;
-  const AccountControlContent({super.key, this.minimal = false});
-
-  final List<Map<String, String>> adminActivities = const [
-    {"date": "Oct 10, 2025", "activity": "Added new terminal"},
-    {"date": "Oct 10, 2025", "activity": "Added new terminal"},
-    {"date": "Oct 10, 2025", "activity": "Added new terminal"},
-    {"date": "Oct 10, 2025", "activity": "Added new terminal"},
-    {"date": "Oct 10, 2025", "activity": "Added new terminal"},
-
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final activities = minimal ? adminActivities.take(5).toList() : adminActivities;
-
-    return Container(
-      padding: const EdgeInsets.all(15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 12),
-          Row(children: const [
-            Expanded(
-              flex: 2,
-              child: Center(child: Text('Date', style: _headerStyle)),
-            ),
-            Expanded(
-              flex: 4,
-              child: Center(child: Text('Activity', style: _headerStyle)),
-            ),
-          ]),
-          ...List.generate(activities.length, (index) {
-            final a = activities[index];
-            final isGray = index % 2 == 0;
-            return Container(
-              color: isGray ? const Color(0xFFF9F9F9) : Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  _cell(a["date"]!, flex: 2),
-                  _cell(a["activity"]!, flex: 4),
-                ],
-              ),
-            );
-          }),
-          if (minimal)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------- User List ----------------
-class UserListContent extends StatelessWidget {
-  final bool minimal;
-  const UserListContent({super.key, this.minimal = false});
-
-  final List<Map<String, String>> users = const [
-    {"name": "Juan Dela Cruz", "email": "juan@gmail.com", "status": "Active"},
-    {"name": "Maria Santos", "email": "maria@gmail.com", "status": "Inactive"},
-    {"name": "Carlos Reyes", "email": "carlos@gmail.com", "status": "Active"},
-    {"name": "Juan Dela Cruz", "email": "juan@gmail.com", "status": "Active"},
-    {"name": "Maria Santos", "email": "maria@gmail.com", "status": "Inactive"},
-    {"name": "Carlos Reyes", "email": "carlos@gmail.com", "status": "Active"},
-    {"name": "Juan Dela Cruz", "email": "juan@gmail.com", "status": "Active"},
-    {"name": "Maria Santos", "email": "maria@gmail.com", "status": "Inactive"},
-    {"name": "Carlos Reyes", "email": "carlos@gmail.com", "status": "Active"},
-    {"name": "Juan Dela Cruz", "email": "juan@gmail.com", "status": "Active"},
-    {"name": "Maria Santos", "email": "maria@gmail.com", "status": "Inactive"},
-    {"name": "Carlos Reyes", "email": "carlos@gmail.com", "status": "Active"},
-    {"name": "Juan Dela Cruz", "email": "juan@gmail.com", "status": "Active"},
-    {"name": "Maria Santos", "email": "maria@gmail.com", "status": "Inactive"},
-    {"name": "Carlos Reyes", "email": "carlos@gmail.com", "status": "Active"},
-    {"name": "Juan Dela Cruz", "email": "juan@gmail.com", "status": "Active"},
-    {"name": "Maria Santos", "email": "maria@gmail.com", "status": "Inactive"},
-    {"name": "Carlos Reyes", "email": "carlos@gmail.com", "status": "Active"},
-    {"name": "Juan Dela Cruz", "email": "juan@gmail.com", "status": "Active"},
-    {"name": "Maria Santos", "email": "maria@gmail.com", "status": "Inactive"},
-    {"name": "Carlos Reyes", "email": "carlos@gmail.com", "status": "Active"},
-
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final data = minimal ? users.take(5).toList() : users;
-
-    return Container(
-      padding: const EdgeInsets.all(15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 12),
-          Row(children: const [
-            Expanded(
-              flex: 3,
-              child: Center(child: Text('Name', style: _headerStyle)),
-            ),
-            Expanded(
-              flex: 4,
-              child: Center(child: Text('Email', style: _headerStyle)),
-            ),
-            Expanded(
-              flex: 2,
-              child: Center(child: Text('Status', style: _headerStyle)),
-            ),
-          ]),
-          ...List.generate(data.length, (index) {
-            final user = data[index];
-            final isGray = index % 2 == 0;
-            return Container(
-              color: isGray ? const Color(0xFFF9F9F9) : Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  _cell(user["name"]!, flex: 3),
-                  _cell(user["email"]!, flex: 4),
-                  _cell(user["status"]!, flex: 2),
-                ],
-              ),
-            );
-          }),
-          if (minimal)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------- Trike Driver List ----------------
-class TrikeDriverListContent extends StatelessWidget {
-  final bool minimal;
-  const TrikeDriverListContent({super.key, this.minimal = false});
-
-  final List<Map<String, String>> drivers = const [
-    {"name": "Pedro Cruz", "toda": "Toda 1"},
-    {"name": "Jose Dela Rosa", "toda": "Toda 3"},
-    {"name": "Mark David", "toda": "Toda 5"},
-    {"name": "Mark David", "toda": "Toda 5"},
-    {"name": "Mark David", "toda": "Toda 5"},
-    {"name": "Mark David", "toda": "Toda 5"},
-    {"name": "Mark David", "toda": "Toda 5"},
-
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final data = minimal ? drivers.take(5).toList() : drivers;
-
-    return Container(
-      padding: const EdgeInsets.all(15),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const SizedBox(height: 12),
-          Row(children: const [
-            Expanded(
-              flex: 3,
-              child: Center(child: Text('Driver', style: _headerStyle)),
-            ),
-            Expanded(
-              flex: 3,
-              child: Center(child: Text('Toda', style: _headerStyle)),
-            ),
-
-          ]),
-          ...List.generate(data.length, (index) {
-            final d = data[index];
-            final isGray = index % 2 == 0;
-            return Container(
-              color: isGray ? const Color(0xFFF9F9F9) : Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  _cell(d["name"]!, flex: 3),
-                  _cell(d["toda"]!, flex: 3),
-                ],
-              ),
-            );
-          }),
-          if (minimal)
-            const Padding(
-              padding: EdgeInsets.only(top: 8),
-              
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-// ---------------- Shared Styles ----------------
-const _headerStyle = TextStyle(
-  fontSize: 18,
-  fontWeight: FontWeight.bold,
-  color: Color(0xFF323232),
-);
-
-Widget _cell(String text, {int flex = 1}) {
+Widget _buildCell(String text, {
+  required int flex,
+  int maxLines = 1,
+  bool isNumber = false,
+  Color textColor = const Color(0xFF323232),
+}) {
   return Expanded(
     flex: flex,
     child: Center(
       child: Text(
         text,
-        style: const TextStyle(fontSize: 15, color: Color(0xFF323232)),
+        style: TextStyle(
+          fontSize: isNumber ? 15 : 14,
+          color: textColor,
+          fontWeight: isNumber ? FontWeight.w600 : FontWeight.normal,
+        ),
+        maxLines: maxLines,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+      ),
+    ),
+  );
+}
+
+Widget _buildErrorWidget(String section) {
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 12),
+          Text(
+            '$section Error',
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.red,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Please check your connection',
+            style: TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Widget _buildIndexErrorWidget() {
+  return Center(
+    child: Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const SizedBox(height: 12),
+          const Text(
+            'Index Required',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.orange,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Firestore needs to create an index for this query.',
+            style: TextStyle(fontSize: 14),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'This usually happens automatically and takes 5-10 minutes.',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     ),
   );

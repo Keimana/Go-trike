@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/custom_text_field.dart';
 
@@ -12,17 +13,63 @@ class SignInAdmin extends StatefulWidget {
 class _SignInAdminState extends State<SignInAdmin> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool _isLoading = false;
 
-  void handleLogin() {
+  void handleLogin() async {
     String email = emailController.text.trim();
     String password = passwordController.text.trim();
 
-    if (email == "admin@example.com" && password == "12345") {
-      Navigator.pushReplacementNamed(context, "/adminDashboard");
-    } else {
+    if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid email or password")),
+        const SnackBar(content: Text("Please enter email and password")),
       );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Sign in with Firebase Auth
+      UserCredential userCredential = await FirebaseAuth.instance
+          .signInWithEmailAndPassword(email: email, password: password);
+      
+      print('✅ Admin signed in: ${userCredential.user?.uid}');
+      
+      // Navigate to dashboard
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, "/adminDashboard");
+      }
+    } on FirebaseAuthException catch (e) {
+      String message = "Login failed";
+      
+      if (e.code == 'user-not-found') {
+        message = "No admin account found with this email";
+      } else if (e.code == 'wrong-password') {
+        message = "Incorrect password";
+      } else if (e.code == 'invalid-email') {
+        message = "Invalid email format";
+      } else if (e.code == 'user-disabled') {
+        message = "This account has been disabled";
+      } else {
+        message = "Login failed: ${e.message}";
+      }
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      print('❌ Login error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("An error occurred: $e")),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -122,10 +169,12 @@ class _SignInAdminState extends State<SignInAdmin> {
                         SizedBox(
                           width: double.infinity,
                           height: 50,
-                          child: PrimaryButton(
-                            text: "Login",
-                            onPressed: handleLogin,
-                          ),
+                          child: _isLoading
+                              ? const Center(child: CircularProgressIndicator())
+                              : PrimaryButton(
+                                  text: "Login",
+                                  onPressed: handleLogin,
+                                ),
                         ),
                       ],
                     ),
