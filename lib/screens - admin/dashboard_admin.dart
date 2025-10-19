@@ -331,6 +331,7 @@ class ReportsContent extends StatelessWidget {
             _HeaderConfig('Issues', flex: 3),
             _HeaderConfig('Comments', flex: 2),
             _HeaderConfig('Reporter', flex: 2),
+            _HeaderConfig('Toda #', flex: 2),
           ],
           rows: displayReports,
           builder: (report, index) => [
