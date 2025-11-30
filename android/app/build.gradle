@@ -1,0 +1,90 @@
+plugins {
+    id "com.android.application"
+    // START: FlutterFire Configuration
+    id 'com.google.gms.google-services'
+    // END: FlutterFire Configuration
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file('local.properties')
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader('UTF-8') { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode')
+if (flutterVersionCode == null) {
+    flutterVersionCode = '1'
+}
+
+def flutterVersionName = localProperties.getProperty('flutter.versionName')
+if (flutterVersionName == null) {
+    flutterVersionName = '1.0'
+}
+
+android {
+    namespace "com.example.demo_app"
+    compileSdk flutter.compileSdkVersion
+    ndkVersion rootProject.ext.has("ndkVersion") ? rootProject.ext.ndkVersion : "26.1.10909125"
+
+    compileOptions {
+        // ✅ Force Java 11 for Firebase & Google Maps
+        sourceCompatibility JavaVersion.VERSION_11
+        targetCompatibility JavaVersion.VERSION_11
+    }
+
+    kotlinOptions {
+        jvmTarget = "11"
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
+
+    defaultConfig {
+        applicationId "com.example.demo_app"
+
+        // ✅ Firebase Auth now requires minSdk 23
+        minSdkVersion flutter.minSdkVersion
+
+        // ✅ Match Flutter's recommended target
+        targetSdkVersion flutter.targetSdkVersion
+
+        versionCode flutterVersionCode.toInteger()
+        versionName flutterVersionName
+
+        // ✅ Prevent dexing issues when using Firebase
+        multiDexEnabled true
+        
+        // Set manifest placeholder
+        manifestPlaceholders = [
+            GOOGLE_MAPS_API_KEY: localProperties.getProperty('GOOGLE_MAPS_API_KEY', '')
+        ]
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+            minifyEnabled false    // Disable shrinking until release signing is set
+            shrinkResources false
+        }
+    }
+}
+
+flutter {
+    source '../..'
+}
+
+dependencies {
+    // ✅ Force Kotlin version to match your top-level build.gradle (1.8.22)
+    configurations.all {
+        resolutionStrategy {
+            force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22"
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22"
+        }
+    }
+}
