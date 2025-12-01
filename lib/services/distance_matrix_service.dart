@@ -13,31 +13,31 @@ class DistanceMatrixService {
     Terminal(
       id: 'terminal1',
       name: 'Tricycle Terminal 1',
-      location: const LatLng(15.116888, 120.615710),
+      location: const LatLng(15.113826, 120.609493),
       address: 'Telabastagan Terminal 1',
     ),
     Terminal(
       id: 'terminal2', 
       name: 'Tricycle Terminal 2',
-      location: const LatLng(15.117600, 120.614200),
+      location: const LatLng(15.113804, 120.613744),
       address: 'Telabastagan Terminal 2',
     ),
     Terminal(
       id: 'terminal3',
       name: 'Tricycle Terminal 3', 
-      location: const LatLng(15.118200, 120.617200),
+      location: const LatLng(15.116681, 120.614126),
       address: 'Telabastagan Terminal 3',
     ),
     Terminal(
       id: 'terminal4',
       name: 'Tricycle Terminal 4',
-      location: const LatLng(15.115600, 120.613500),
+      location: const LatLng(15.118741, 120.615329),
       address: 'Telabastagan Terminal 4',
     ),
     Terminal(
       id: 'terminal5',
       name: 'Tricycle Terminal 5',
-      location: const LatLng(15.115900, 120.616000),
+      location: const LatLng(15.118879, 120.617620),
       address: 'Telabastagan Terminal 5',
     ),
   ];

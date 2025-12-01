@@ -75,11 +75,11 @@ class _MainScreenContentState extends State<MainScreenContent> {
   bool _iconsLoaded = false;
 
   static const List<LatLng> _terminalLocations = [
-    LatLng(15.116888, 120.615710),
-    LatLng(15.117600, 120.614200),
-    LatLng(15.118200, 120.617200),
-    LatLng(15.115600, 120.613500),
-    LatLng(15.115900, 120.616000),
+    LatLng(15.113826, 120.609493),
+    LatLng(15.113804, 120.613744),
+    LatLng(15.116681, 120.614126),
+    LatLng(15.118741, 120.615329),
+    LatLng(15.118879, 120.617620),
   ];
 
   bool _hasPendingRide = false;
@@ -95,8 +95,8 @@ class _MainScreenContentState extends State<MainScreenContent> {
   bool _isCalculatingRoute = false;
 
   static final LatLngBounds _telabastaganBounds = LatLngBounds(
-    southwest: const LatLng(15.1140, 120.6125),
-    northeast: const LatLng(15.1195, 120.6185),
+    southwest: const LatLng(15.1120, 120.6090),
+    northeast: const LatLng(15.1200, 120.6180),
   );
 
   @override
