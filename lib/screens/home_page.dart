@@ -60,6 +60,7 @@ class MainScreenContent extends StatefulWidget {
 class _MainScreenContentState extends State<MainScreenContent> {
   GoogleMapController? _mapController;
   final Set<Marker> _markers = {};
+  final Set<Circle> _circles = {};
   LatLng? _currentUserLocation;
   LatLng? _selectedPickupLocation;
   LatLng? _selectedDestinationLocation;
@@ -106,6 +107,10 @@ class _MainScreenContentState extends State<MainScreenContent> {
     northeast: const LatLng(15.3000, 121.0000),
   );
 
+  // Center points for circular zones
+  static const LatLng _telabastaganCenter = LatLng(15.116, 120.6135);
+  static const LatLng _pampangaCenter = LatLng(15.100, 120.700);
+
   @override
   void initState() {
     super.initState();
@@ -120,6 +125,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
     
     if (mounted) {
       _loadTerminalMarkers();
+      _loadZones();
       _checkForPendingRides();
     }
   }
@@ -130,6 +136,34 @@ class _MainScreenContentState extends State<MainScreenContent> {
     _userRidesSubscription?.cancel();
     _mapController?.dispose();
     super.dispose();
+  }
+
+  void _loadZones() {
+    // Telabastagan pickup zone (1km radius)
+    final Circle telabastaganZone = Circle(
+      circleId: const CircleId('pickup_zone'),
+      center: _telabastaganCenter,
+      radius: 800, // 1km radius
+      fillColor: Colors.green.withOpacity(0.1),
+      strokeColor: Colors.green.withOpacity(0.5),
+      strokeWidth: 2,
+    );
+
+    // Pampanga destination zone (15km radius)
+    final Circle pampangaZone = Circle(
+      circleId: const CircleId('destination_zone'),
+      center: _pampangaCenter,
+      radius: 20000, // 15km radius
+      fillColor: Colors.blue.withOpacity(0.05),
+      strokeColor: Colors.blue.withOpacity(0.3),
+      strokeWidth: 1,
+    );
+
+    setState(() {
+      _circles.clear();
+      _circles.add(telabastaganZone);
+      _circles.add(pampangaZone);
+    });
   }
 
   Future<void> _loadCustomMarkers() async {
@@ -415,12 +449,12 @@ class _MainScreenContentState extends State<MainScreenContent> {
     if (!_isWithinBounds(tappedLocation, _pickMode)) {
       if (_pickMode == LocationPickMode.pickup) {
         _showSnackBar(
-          '❌ Pickup must be within Brgy. Telabastagan only\nTap inside the terminal area',
+          '❌ Pickup must be within Brgy. Telabastagan only\nTap inside the green zone',
           Colors.orange
         );
       } else {
         _showSnackBar(
-          '❌ Destination must be within Pampanga province\nPlease select a location in Pampanga',
+          '❌ Destination must be within Pampanga province\nTap inside the blue zone',
           Colors.orange
         );
       }
@@ -483,10 +517,10 @@ class _MainScreenContentState extends State<MainScreenContent> {
     });
 
     final message = mode == LocationPickMode.pickup
-        ? 'Tap on the map to pick your pickup location (Telabastagan only)'
-        : 'Tap on the map to pick your destination (Pampanga province)';
+        ? 'Tap on the map to pick your pickup location (Green zone - Telabastagan only)'
+        : 'Tap on the map to pick your destination (Blue zone - Pampanga province)';
 
-    _showSnackBar(message, mode == LocationPickMode.pickup ? Colors.green : Colors.red);
+    _showSnackBar(message, mode == LocationPickMode.pickup ? Colors.green : Colors.blue);
   }
 
   Future<void> _calculateDistanceAndETA() async {
@@ -954,7 +988,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Out of Service Area'),
-        content: const Text('Your current location is outside Brgy. Telabastagan. Please pick a pickup location on the map within Telabastagan.'),
+        content: const Text('Your current location is outside Brgy. Telabastagan. Please pick a pickup location on the map within the green zone.'),
         actions: [
           TextButton(
             onPressed: () {
@@ -1085,7 +1119,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
     return Stack(
       children: [
         GoogleMap(
-          initialCameraPosition: const CameraPosition(target: LatLng(15.116888, 120.615710), zoom: 16.0),
+          initialCameraPosition: const CameraPosition(target: LatLng(15.116888, 120.615710), zoom: 14.0),
           onMapCreated: (controller) => _mapController = controller,
           onTap: _onMapTap,
           myLocationEnabled: _useCurrentLocation,
@@ -1094,6 +1128,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
           cameraTargetBounds: CameraTargetBounds(_pampangaDestinationBounds),
           minMaxZoomPreference: const MinMaxZoomPreference(12, 20),
           markers: _markers,
+          circles: _circles,
         ),
 
         Positioned(
@@ -1233,28 +1268,94 @@ class _MainScreenContentState extends State<MainScreenContent> {
           ),
         ),
 
+        // Zone Legend
+        Positioned(
+          bottom: size.height * 0.25,
+          left: size.width * 0.04,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 4))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1), // EXACT SAME as pickup zone fill
+                        border: Border.all(
+                          color: Colors.green.withOpacity(0.5), // EXACT SAME as pickup zone border
+                          width: 2, // EXACT SAME thickness
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Pickup Zone',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      width: 12,
+                      height: 12,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.05), // EXACT SAME as destination zone fill
+                        border: Border.all(
+                          color: Colors.blue.withOpacity(0.3), // EXACT SAME as destination zone border
+                          width: 1, // EXACT SAME thickness
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'Destination Zone',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+
         if (_pickMode != LocationPickMode.none)
           Positioned(
-            bottom: size.height * 0.25,
+            bottom: size.height * 0.3,
             left: size.width * 0.04,
             right: size.width * 0.04,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
               decoration: BoxDecoration(
-                color: _pickMode == LocationPickMode.pickup ? Colors.green : Colors.red,
+                color: _pickMode == LocationPickMode.pickup ? Colors.green : Colors.blue,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 4))],
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(_pickMode == LocationPickMode.pickup ? Icons.location_searching : Icons.flag, color: Colors.white, size: 20),
+                  Icon(
+                    _pickMode == LocationPickMode.pickup ? Icons.location_searching : Icons.flag,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
                       _pickMode == LocationPickMode.pickup 
-                          ? 'Tap map to select pickup location (Brgy. Telabastagan only)' 
-                          : 'Tap map to select destination (Pampanga province)',
+                          ? 'Tap inside the GREEN zone to select pickup location' 
+                          : 'Tap inside the BLUE zone to select destination',
                       style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
                       textAlign: TextAlign.center,
                     ),
