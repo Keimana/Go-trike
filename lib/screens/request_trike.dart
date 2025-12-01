@@ -237,6 +237,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
       print('Distance in KM: $_distanceInKm');
       print('Duration in Seconds: $_durationInSeconds');
       print('Fare: $fare');
+      print('Payment Method: $_selectedPaymentMethod');
       print('===============================');
       
       final RideRequest? rideRequest = await RideRequestService.submitRideRequest(
@@ -867,6 +868,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
             ),
             const SizedBox(height: 12),
 
+            // Cash option
             GestureDetector(
               onTap: () {
                 setState(() {
@@ -912,6 +914,56 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                 ),
               ),
             ),
+
+            const SizedBox(height: 12),
+
+            // GCash option
+            GestureDetector(
+              onTap: () {
+                setState(() {
+                  _selectedPaymentMethod = 'GCash';
+                });
+              },
+              child: Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: _selectedPaymentMethod == 'GCash'
+                      ? const Color(0xFF0097B2)
+                      : Colors.grey[200],
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: _selectedPaymentMethod == 'GCash'
+                        ? const Color(0xFF0097B2)
+                        : Colors.grey[300]!,
+                    width: 2,
+                  ),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.payment,
+                      color: _selectedPaymentMethod == 'GCash'
+                          ? Colors.white
+                          : Colors.black54,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'GCash',
+                      style: TextStyle(
+                        color: _selectedPaymentMethod == 'GCash'
+                            ? Colors.white
+                            : Colors.black87,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
             const SizedBox(height: 32),
 
             // Request & Cancel buttons
