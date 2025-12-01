@@ -4,6 +4,7 @@ import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
 import 'home_page.dart';
 import '../services/auth_service.dart';
+import 'EmailVerificationScreen.dart';
 
 final authService = AuthService();
 
@@ -115,39 +116,77 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-    Future<void> _handleSignIn() async {
-      // Clear previous error
-      setState(() {
-        _errorMessage = null;
-      });
+  // Handle sign in
+  Future<void> _handleSignIn() async {
+    setState(() {
+      _errorMessage = null;
+    });
 
-      // Manual validation
-      String? emailError = _validateField(emailController.text, 'Email');
-      String? passwordError = _validateField(passwordController.text, 'Password');
+    String? emailError = _validateField(emailController.text, 'Email');
+    String? passwordError = _validateField(passwordController.text, 'Password');
 
-      // Check for validation errors
-      if (emailError != null) {
-        setState(() => _errorMessage = emailError);
-        return;
-      }
-      if (passwordError != null) {
-        setState(() => _errorMessage = passwordError);
-        return;
-      }
+    if (emailError != null) {
+      setState(() => _errorMessage = emailError);
+      return;
+    }
+    if (passwordError != null) {
+      setState(() => _errorMessage = passwordError);
+      return;
+    }
 
-      setState(() {
-        _isLoading = true;
-      });
+    setState(() {
+      _isLoading = true;
+    });
 
-      try {
-        final result = await _authenticateUser(
-          email: emailController.text.trim(),
-          password: passwordController.text,
-        );
+    try {
+      final result = await _authenticateUser(
+        email: emailController.text.trim(),
+        password: passwordController.text,
+      );
 
-        if (result['success']) {
+      if (result['success']) {
+        User? user = result['user'];
+        
+        if (user != null) {
+          // Check if email is verified
+          if (!user.emailVerified) {
+            // Email not verified - send verification email
+            final emailResult = await authService.sendEmailVerification();
+            
+            if (mounted) {
+              if (emailResult['success']) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Verification email sent! Please check your inbox.'),
+                    backgroundColor: Colors.green,
+                    duration: Duration(seconds: 3),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(emailResult['message']),
+                    backgroundColor: Colors.orange,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+              
+              // Navigate to email verification screen
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EmailVerificationScreen(
+                    email: emailController.text.trim(),
+                  ),
+                ),
+              );
+            }
+            return;
+          }
+          
+          // Email is verified, proceed to home
           if (mounted) {
-            // Show "Login Successful!" message
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Login Successful!'),
@@ -156,33 +195,31 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
             );
 
-            // Optional: wait 2 seconds before navigating
             await Future.delayed(const Duration(seconds: 2));
 
-            // Navigate to home screen
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (context) => const HomePage()),
             );
           }
-        } else {
-          setState(() {
-            _errorMessage = result['message'];
-          });
         }
-      } catch (e) {
+      } else {
         setState(() {
-          _errorMessage = 'An error occurred. Please try again.';
+          _errorMessage = result['message'];
         });
-      } finally {
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'An error occurred. Please try again.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
-
+  }
 
   // Handle forgot password
   Future<void> _handleForgotPassword() async {
@@ -218,158 +255,158 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
-@override
-Widget build(BuildContext context) {
-  return Scaffold(
-    resizeToAvoidBottomInset: true, // important
-    body: SafeArea(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            reverse: true, // ensures the bottom content stays visible when keyboard shows
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: constraints.maxHeight,
-              ),
-              child: IntrinsicHeight(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    // Go Trike title
-                    const Text.rich(
-                      TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'Go ',
-                            style: TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF0097B2),
-                            ),
-                          ),
-                          TextSpan(
-                            text: 'Trike',
-                            style: TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFFF9500),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Logo
-                    Image.asset('assets/images/trike.png', height: 100),
-                    const SizedBox(height: 16),
-
-                    const Text(
-                      "Hello!",
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Error message
-                    if (_errorMessage != null)
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade50,
-                          border: Border.all(color: Colors.red.shade200),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          _errorMessage!,
-                          style: TextStyle(
-                            color: Colors.red.shade700,
-                            fontSize: 14,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-
-                    // Email input
-                    CustomTextField(
-                      hintText: "Email",
-                      controller: emailController,
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Password input
-                    CustomTextField(
-                      hintText: "Password",
-                      obscureText: true,
-                      controller: passwordController,
-                    ),
-                    const SizedBox(height: 18),
-
-                    // Login button
-                    PrimaryButton(
-                      text: _isLoading ? "Signing In..." : "Login",
-                      onPressed: () {
-                        if (!_isLoading) {
-                          _handleSignIn();
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Forgot password
-                    GestureDetector(
-                      onTap: _isLoading ? null : _handleForgotPassword,
-                      child: Text(
-                        "Forgot Password?",
-                        style: TextStyle(
-                          color: _isLoading ? Colors.grey : const Color(0xFF0097B2),
-                          fontFamily: 'Roboto',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    Center(
-                      child: GestureDetector(
-                        onTap: _isLoading ? null : () => Navigator.pushNamed(context, '/signup'),
-                        child: RichText(
-                          text: TextSpan(
-                            style: TextStyle(
-                              fontFamily: 'Roboto',
-                              fontSize: 14,
-                              color: _isLoading ? Colors.grey : const Color(0xFF0097B2),
-                            ),
-                            children: [
-                              const TextSpan(text: "Don't have an account? "),
-                              TextSpan(
-                                text: "Sign Up",
-                                style: TextStyle(
-                                  color: _isLoading ? Colors.grey : const Color(0xFF000000),
-                                  decoration: TextDecoration.underline,
-                                  fontWeight: FontWeight.w500,
-                                ),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      resizeToAvoidBottomInset: true,
+      body: SafeArea(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              reverse: true,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight,
+                ),
+                child: IntrinsicHeight(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Go Trike title
+                      const Text.rich(
+                        TextSpan(
+                          children: [
+                            TextSpan(
+                              text: 'Go ',
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF0097B2),
                               ),
-                            ],
+                            ),
+                            TextSpan(
+                              text: 'Trike',
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 26,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFFFF9500),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Logo
+                      Image.asset('assets/images/trike.png', height: 100),
+                      const SizedBox(height: 16),
+
+                      const Text(
+                        "Hello!",
+                        style: TextStyle(
+                          fontFamily: 'Roboto',
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // Error message
+                      if (_errorMessage != null)
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            border: Border.all(color: Colors.red.shade200),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontSize: 14,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+
+                      // Email input
+                      CustomTextField(
+                        hintText: "Email",
+                        controller: emailController,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Password input
+                      CustomTextField(
+                        hintText: "Password",
+                        obscureText: true,
+                        controller: passwordController,
+                      ),
+                      const SizedBox(height: 18),
+
+                      // Login button
+                      PrimaryButton(
+                        text: _isLoading ? "Signing In..." : "Login",
+                        onPressed: () {
+                          if (!_isLoading) {
+                            _handleSignIn();
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Forgot password
+                      GestureDetector(
+                        onTap: _isLoading ? null : _handleForgotPassword,
+                        child: Text(
+                          "Forgot Password?",
+                          style: TextStyle(
+                            color: _isLoading ? Colors.grey : const Color(0xFF0097B2),
+                            fontFamily: 'Roboto',
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 20),
+
+                      Center(
+                        child: GestureDetector(
+                          onTap: _isLoading ? null : () => Navigator.pushNamed(context, '/signup'),
+                          child: RichText(
+                            text: TextSpan(
+                              style: TextStyle(
+                                fontFamily: 'Roboto',
+                                fontSize: 14,
+                                color: _isLoading ? Colors.grey : const Color(0xFF0097B2),
+                              ),
+                              children: [
+                                const TextSpan(text: "Don't have an account? "),
+                                TextSpan(
+                                  text: "Sign Up",
+                                  style: TextStyle(
+                                    color: _isLoading ? Colors.grey : const Color(0xFF000000),
+                                    decoration: TextDecoration.underline,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
