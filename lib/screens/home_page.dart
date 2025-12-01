@@ -88,15 +88,22 @@ class _MainScreenContentState extends State<MainScreenContent> {
   StreamSubscription<List<RideRequest>>? _userRidesSubscription;
   bool _hasShownAcceptedModal = false;
   bool _hasShownArrivedModal = false;
-  bool _isWaitingForDriverArrival = false; // NEW: Track if waiting for driver
+  bool _isWaitingForDriverArrival = false;
 
   String? _distanceText;
   String? _durationText;
   bool _isCalculatingRoute = false;
 
-  static final LatLngBounds _telabastaganBounds = LatLngBounds(
+  // Define separate bounds for pickup and destination
+  static final LatLngBounds _telabastaganPickupBounds = LatLngBounds(
     southwest: const LatLng(15.1120, 120.6090),
     northeast: const LatLng(15.1200, 120.6180),
+  );
+
+  static final LatLngBounds _pampangaDestinationBounds = LatLngBounds(
+    // Pampanga province bounds (approximate)
+    southwest: const LatLng(14.9000, 120.4000),
+    northeast: const LatLng(15.3000, 121.0000),
   );
 
   @override
@@ -266,11 +273,19 @@ class _MainScreenContentState extends State<MainScreenContent> {
     }
   }
 
-  bool _isWithinBounds(LatLng location) {
-    return location.latitude >= _telabastaganBounds.southwest.latitude &&
-        location.latitude <= _telabastaganBounds.northeast.latitude &&
-        location.longitude >= _telabastaganBounds.southwest.longitude &&
-        location.longitude <= _telabastaganBounds.northeast.longitude;
+  bool _isWithinBounds(LatLng location, LocationPickMode mode) {
+    if (mode == LocationPickMode.pickup) {
+      return location.latitude >= _telabastaganPickupBounds.southwest.latitude &&
+          location.latitude <= _telabastaganPickupBounds.northeast.latitude &&
+          location.longitude >= _telabastaganPickupBounds.southwest.longitude &&
+          location.longitude <= _telabastaganPickupBounds.northeast.longitude;
+    } else if (mode == LocationPickMode.destination) {
+      return location.latitude >= _pampangaDestinationBounds.southwest.latitude &&
+          location.latitude <= _pampangaDestinationBounds.northeast.latitude &&
+          location.longitude >= _pampangaDestinationBounds.southwest.longitude &&
+          location.longitude <= _pampangaDestinationBounds.northeast.longitude;
+    }
+    return false;
   }
 
   Future<String?> _reverseGeocode(LatLng location) async {
@@ -364,7 +379,8 @@ class _MainScreenContentState extends State<MainScreenContent> {
       Position position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       final LatLng currentLocation = LatLng(position.latitude, position.longitude);
 
-      if (!_isWithinBounds(currentLocation)) {
+      // Check if current location is within Telabastagan (for pickup)
+      if (!_isWithinBounds(currentLocation, LocationPickMode.pickup)) {
         if (mounted) _showOutOfBoundsDialog();
         return;
       }
@@ -396,8 +412,18 @@ class _MainScreenContentState extends State<MainScreenContent> {
   void _onMapTap(LatLng tappedLocation) async {
     if (_pickMode == LocationPickMode.none) return;
 
-    if (!_isWithinBounds(tappedLocation)) {
-      _showSnackBar('Please pick a location within the service area', Colors.red);
+    if (!_isWithinBounds(tappedLocation, _pickMode)) {
+      if (_pickMode == LocationPickMode.pickup) {
+        _showSnackBar(
+          '❌ Pickup must be within Brgy. Telabastagan only\nTap inside the terminal area',
+          Colors.orange
+        );
+      } else {
+        _showSnackBar(
+          '❌ Destination must be within Pampanga province\nPlease select a location in Pampanga',
+          Colors.orange
+        );
+      }
       return;
     }
 
@@ -428,7 +454,13 @@ class _MainScreenContentState extends State<MainScreenContent> {
 
       _updateMarkers();
       _mapController?.animateCamera(CameraUpdate.newLatLngZoom(tappedLocation, 17.0));
-      _showSnackBar('Location selected: $address', Colors.green);
+      
+      // Different success messages based on mode
+      if (_pickMode == LocationPickMode.pickup) {
+        _showSnackBar('✅ Pickup set in Telabastagan: $address', Colors.green);
+      } else {
+        _showSnackBar('✅ Destination set in Pampanga: $address', Colors.green);
+      }
     }
   }
 
@@ -451,8 +483,8 @@ class _MainScreenContentState extends State<MainScreenContent> {
     });
 
     final message = mode == LocationPickMode.pickup
-        ? 'Tap on the map to pick your pickup location'
-        : 'Tap on the map to pick your destination';
+        ? 'Tap on the map to pick your pickup location (Telabastagan only)'
+        : 'Tap on the map to pick your destination (Pampanga province)';
 
     _showSnackBar(message, mode == LocationPickMode.pickup ? Colors.green : Colors.red);
   }
@@ -609,7 +641,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
     setState(() {
       _hasPendingRide = false;
       _activeRideId = null;
-      _isWaitingForDriverArrival = false; // Clear waiting state
+      _isWaitingForDriverArrival = false;
     });
     _rideStatusSubscription?.cancel();
     _rideStatusSubscription = null;
@@ -620,7 +652,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
     setState(() {
       _hasPendingRide = false;
       _activeRideId = null;
-      _isWaitingForDriverArrival = false; // Clear waiting state
+      _isWaitingForDriverArrival = false;
     });
     _rideStatusSubscription?.cancel();
     _rideStatusSubscription = null;
@@ -631,16 +663,15 @@ class _MainScreenContentState extends State<MainScreenContent> {
     _hasShownAcceptedModal = true;
     setState(() {
       _hasPendingRide = false;
-      _isWaitingForDriverArrival = true; // Set waiting state
+      _isWaitingForDriverArrival = true;
     });
     showDriverOnWayModal(context, rideRequest.todaNumber ?? 'N/A');
-    // After showing the original modal, start periodic arrival checks
+    
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted && _activeRideId == rideRequest.id) {
         _showPeriodicArrivalCheckDialog(rideRequest);
       }
     });
-    // Keep listening to ride status
   }
 
   void _showPeriodicArrivalCheckDialog(RideRequest rideRequest) {
@@ -683,7 +714,6 @@ class _MainScreenContentState extends State<MainScreenContent> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              // Ask again after 30 seconds
               Future.delayed(const Duration(seconds: 30), () {
                 if (mounted && _activeRideId == rideRequest.id) {
                   _showPeriodicArrivalCheckDialog(rideRequest);
@@ -718,7 +748,6 @@ class _MainScreenContentState extends State<MainScreenContent> {
   }
 
   Future<void> _completeRide(RideRequest rideRequest) async {
-    // Show loading
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -735,13 +764,13 @@ class _MainScreenContentState extends State<MainScreenContent> {
     );
 
     if (mounted) {
-      Navigator.of(context).pop(); // Close loading
+      Navigator.of(context).pop();
 
       if (success) {
         setState(() {
           _hasPendingRide = false;
           _activeRideId = null;
-          _isWaitingForDriverArrival = false; // Clear waiting state
+          _isWaitingForDriverArrival = false;
         });
         _rideStatusSubscription?.cancel();
         _rideStatusSubscription = null;
@@ -925,14 +954,14 @@ class _MainScreenContentState extends State<MainScreenContent> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Out of Service Area'),
-        content: const Text('Your location is outside Telabastagan. Please pick a location on the map.'),
+        content: const Text('Your current location is outside Brgy. Telabastagan. Please pick a pickup location on the map within Telabastagan.'),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
               _enableLocationPicking(LocationPickMode.pickup);
             },
-            child: const Text('Pick Location'),
+            child: const Text('Pick Pickup Location'),
           ),
         ],
       ),
@@ -1061,8 +1090,9 @@ class _MainScreenContentState extends State<MainScreenContent> {
           onTap: _onMapTap,
           myLocationEnabled: _useCurrentLocation,
           myLocationButtonEnabled: false,
-          cameraTargetBounds: CameraTargetBounds(_telabastaganBounds),
-          minMaxZoomPreference: const MinMaxZoomPreference(16, 20),
+          // Set camera bounds to Pampanga so users can see the whole destination area
+          cameraTargetBounds: CameraTargetBounds(_pampangaDestinationBounds),
+          minMaxZoomPreference: const MinMaxZoomPreference(12, 20),
           markers: _markers,
         ),
 
@@ -1105,7 +1135,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Destination', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
+                                const Text('Destination (Pampanga)', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
                                 Text(
                                   _getDestinationAddressText(),
                                   style: TextStyle(
@@ -1222,7 +1252,9 @@ class _MainScreenContentState extends State<MainScreenContent> {
                   const SizedBox(width: 8),
                   Flexible(
                     child: Text(
-                      _pickMode == LocationPickMode.pickup ? 'Tap map to select pickup location' : 'Tap map to select destination',
+                      _pickMode == LocationPickMode.pickup 
+                          ? 'Tap map to select pickup location (Brgy. Telabastagan only)' 
+                          : 'Tap map to select destination (Pampanga province)',
                       style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
                       textAlign: TextAlign.center,
                     ),
