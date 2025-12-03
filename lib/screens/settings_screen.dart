@@ -21,17 +21,6 @@ class SettingsScreen extends StatelessWidget {
       body: Stack(
         children: [
           // Content in the center
-          Center(
-            child: Text(
-              'Under Development',
-              style: TextStyle(
-                fontSize: w * 0.05,
-                fontWeight: FontWeight.w500,
-                color: Colors.black87,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
 
           // ✅ Logout button at bottom center
           Align(

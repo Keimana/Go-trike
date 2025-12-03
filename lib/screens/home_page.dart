@@ -1170,13 +1170,13 @@ class _MainScreenContentState extends State<MainScreenContent> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Destination (Pampanga)', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
+                                const Text('Destination (Pampanga)', style: TextStyle(fontSize: 20, color: Colors.grey, fontWeight: FontWeight.w600)),
                                 Text(
                                   _getDestinationAddressText(),
                                   style: TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w600,
-                                    color: _selectedDestinationLocation != null ? Colors.black : Colors.grey[400],
+                                    color: _selectedDestinationLocation != null ? Colors.black38 : Colors.grey[400],
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -1185,7 +1185,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
                           ),
                           Icon(
                             _selectedDestinationLocation != null ? Icons.check_circle : Icons.add_circle_outline,
-                            size: 20,
+                            size: 30,
                             color: _selectedDestinationLocation != null ? Colors.green : const Color(0xFF0097B2),
                           ),
                         ],
@@ -1213,7 +1213,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Distance', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500)),
+                                const Text('Distance', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600)),
                                 Text(_distanceText!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0097B2))),
                               ],
                             ),
@@ -1227,7 +1227,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('ETA', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500)),
+                                const Text('ETA', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600)),
                                 Text(_durationText!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0097B2))),
                               ],
                             ),
@@ -1250,7 +1250,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
                           child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0097B2))),
                         ),
                         SizedBox(width: 10),
-                        Text('Calculating route...', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500)),
+                        Text('Calculating route...', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
                       ],
                     ),
                   ),
@@ -1261,7 +1261,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
         ),
 
         Positioned(
-          top: safeTop + 16,
+          top: safeTop + 150,
           right: size.width * 0.04,
           child: SettingsButton(
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const SettingsScreen())),
@@ -1285,8 +1285,8 @@ class _MainScreenContentState extends State<MainScreenContent> {
                 Row(
                   children: [
                     Container(
-                      width: 12,
-                      height: 12,
+                      width: 15,
+                      height: 15,
                       decoration: BoxDecoration(
                         color: Colors.green.withOpacity(0.1), // EXACT SAME as pickup zone fill
                         border: Border.all(
@@ -1296,10 +1296,10 @@ class _MainScreenContentState extends State<MainScreenContent> {
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     const Text(
                       'Pickup Zone',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),
@@ -1307,8 +1307,8 @@ class _MainScreenContentState extends State<MainScreenContent> {
                 Row(
                   children: [
                     Container(
-                      width: 12,
-                      height: 12,
+                      width: 15,
+                      height: 15,
                       decoration: BoxDecoration(
                         color: Colors.blue.withOpacity(0.05), // EXACT SAME as destination zone fill
                         border: Border.all(
@@ -1318,10 +1318,10 @@ class _MainScreenContentState extends State<MainScreenContent> {
                         shape: BoxShape.circle,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     const Text(
                       'Destination Zone',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                     ),
                   ],
                 ),

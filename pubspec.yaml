@@ -38,7 +38,8 @@ dependencies:
   intl: ^0.19.0
   json_annotation: ^4.8.1
   geolocator: ^9.0.0
-
+  smooth_page_indicator: ^1.1.0  
+  shared_preferences: ^2.2.0     
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
@@ -108,7 +109,7 @@ flutter:
     - assets/icons/terminal.png
     - assets/icons/fullscreen.svg
     - assets/icons/person_search.svg
-    - .env
+    
 
   fonts:
     - family: Roboto

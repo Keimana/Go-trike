@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
-import 'home_page.dart';
 import '../services/auth_service.dart';
 import 'EmailVerificationScreen.dart';
-
+import '../onboarding/onboarding_screen.dart';
 final authService = AuthService();
 
 class SignInScreen extends StatefulWidget {
@@ -199,7 +198,7 @@ class _SignInScreenState extends State<SignInScreen> {
 
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const HomePage()),
+              MaterialPageRoute(builder: (context) => const OnboardingScreen()),
             );
           }
         }
@@ -301,7 +300,7 @@ class _SignInScreenState extends State<SignInScreen> {
                       const SizedBox(height: 16),
 
                       // Logo
-                      Image.asset('assets/images/trike.png', height: 100),
+                      Image.asset('assets/images/trike.png', height: 250),
                       const SizedBox(height: 16),
 
                       const Text(
