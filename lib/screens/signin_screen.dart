@@ -5,8 +5,7 @@ import '../widgets/primary_button.dart';
 import 'home_page.dart';
 import '../services/auth_service.dart';
 import 'EmailVerificationScreen.dart';
-
-final authService = AuthService();
+import 'phone_otp.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -61,6 +60,7 @@ class _SignInScreenState extends State<SignInScreen> {
     required String password,
   }) async {
     try {
+      final authService = AuthService();
       User? user = await authService.signIn(email, password);
       
       if (user != null) {
@@ -151,6 +151,7 @@ class _SignInScreenState extends State<SignInScreen> {
           // Check if email is verified
           if (!user.emailVerified) {
             // Email not verified - send verification email
+            final authService = AuthService();
             final emailResult = await authService.sendEmailVerification();
             
             if (mounted) {
@@ -185,7 +186,55 @@ class _SignInScreenState extends State<SignInScreen> {
             return;
           }
           
-          // Email is verified, proceed to home
+          // Email is verified, check phone verification
+          final authService = AuthService();
+          final isPhoneVerified = await authService.isPhoneVerified();
+          if (!isPhoneVerified) {
+            // Phone not verified - navigate to phone verification
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Please verify your phone number'),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+
+              await Future.delayed(const Duration(seconds: 1));
+
+              // Get phone from Firestore
+              final phoneNumber = await authService.getUserPhoneNumber(user.uid);
+              
+              if (phoneNumber == null || phoneNumber.isEmpty) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Phone number not found. Please contact support.'),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                  setState(() {
+                    _isLoading = false;
+                  });
+                }
+                return;
+              }
+
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => PhoneOTPVerificationScreen(
+                    phoneNumber: phoneNumber,
+                    userId: user.uid,
+                  ),
+                ),
+              );
+            }
+            return;
+          }
+          
+          // Both email and phone verified - proceed to home
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
@@ -195,7 +244,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
             );
 
-            await Future.delayed(const Duration(seconds: 2));
+            await Future.delayed(const Duration(seconds: 1));
 
             Navigator.pushReplacement(
               context,
@@ -230,17 +279,32 @@ class _SignInScreenState extends State<SignInScreen> {
       return;
     }
 
+    setState(() {
+      _isLoading = true;
+    });
+
     try {
-      await authService.sendPasswordResetEmail(emailController.text.trim());
+      final authService = AuthService();
+      final result = await authService.sendPasswordResetEmail(emailController.text.trim());
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Password reset email sent! Check your inbox.'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 3),
-          ),
-        );
+        if (result['success']) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Password reset email sent! Check your inbox.'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result['message']),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -251,6 +315,12 @@ class _SignInScreenState extends State<SignInScreen> {
             duration: Duration(seconds: 3),
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }

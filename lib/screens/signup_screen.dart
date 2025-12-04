@@ -3,6 +3,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
+import '../services/auth_service.dart';
+import 'EmailVerificationScreen.dart';
 
 /// Sign up screen for new user registration
 class SignUpScreen extends StatefulWidget {
@@ -244,22 +246,6 @@ class _SignUpScreenState extends State<SignUpScreen> {
     }
   }
 
-  /// Create user data map for Firestore
-  Map<String, dynamic> _createUserData({
-    required String uid,
-    required String name,
-    required String phone,
-    required String email,
-  }) {
-    return {
-      'uid': uid,
-      'name': name,
-      'phone': phone, // This will already have +63 prefix
-      'email': email,
-      'createdAt': FieldValue.serverTimestamp(),
-    };
-  }
-
   /// Store user data in Firestore
   Future<void> _storeUserData({
     required String uid,
@@ -269,12 +255,18 @@ class _SignUpScreenState extends State<SignUpScreen> {
   }) async {
     debugPrint('Storing user data in Firestore for UID: $uid');
 
-    final userData = _createUserData(
-      uid: uid,
-      name: name,
-      phone: phone,
-      email: email,
-    );
+    // Ensure phone has +63 prefix
+    String formattedPhone = phone.startsWith('+63') ? phone : '+63${phone.replaceAll(RegExp(r'[^\d]'), '')}';
+
+    final userData = {
+      'uid': uid,
+      'name': name,
+      'phone': formattedPhone, // Store with consistent format
+      'email': email,
+      'emailVerified': false,
+      'phoneVerified': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    };
 
     try {
       // Primary attempt with server timestamp
@@ -290,7 +282,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       await _verifyUserDataWrite(uid);
     } catch (error) {
       debugPrint('Primary Firestore write failed: $error');
-      await _retryUserDataWrite(uid, name, phone, email);
+      await _retryUserDataWrite(uid, name, formattedPhone, email);
     }
   }
 
@@ -321,6 +313,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'name': name,
         'phone': phone,
         'email': email,
+        'emailVerified': false,
+        'phoneVerified': false,
         'created': DateTime.now().toIso8601String(),
       };
 
@@ -366,7 +360,11 @@ class _SignUpScreenState extends State<SignUpScreen> {
         email: email,
       );
 
-      return AuthResult.success('Account created successfully!', user);
+      // Send email verification
+      final authService = AuthService();
+      await authService.sendEmailVerification();
+
+      return AuthResult.success('Account created successfully!', user, phone);
     } on FirebaseAuthException catch (authError) {
       debugPrint('Firebase Auth error: ${authError.code} - ${authError.message}');
       return AuthResult.failure(_getAuthErrorMessage(authError));
@@ -430,7 +428,16 @@ class _SignUpScreenState extends State<SignUpScreen> {
       if (result.isSuccess) {
         debugPrint('Registration completed successfully');
         _showSuccessMessage();
-        Navigator.pop(context);
+        
+        // Navigate to email verification screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => EmailVerificationScreen(
+              email: _emailController.text.trim(),
+            ),
+          ),
+        );
       } else {
         debugPrint('Registration failed: ${result.message}');
         setState(() {
@@ -457,9 +464,9 @@ class _SignUpScreenState extends State<SignUpScreen> {
   void _showSuccessMessage() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Account created successfully! Please sign in.'),
+        content: Text('Account created! Please verify your email.'),
         backgroundColor: Colors.green,
-        duration: Duration(seconds: 4),
+        duration: Duration(seconds: 3),
       ),
     );
   }
@@ -731,18 +738,21 @@ class AuthResult {
   final bool isSuccess;
   final String message;
   final User? user;
+  final String? phoneNumber;
 
   const AuthResult._({
     required this.isSuccess,
     required this.message,
     this.user,
+    this.phoneNumber,
   });
 
-  factory AuthResult.success(String message, User user) {
+  factory AuthResult.success(String message, User user, String phoneNumber) {
     return AuthResult._(
       isSuccess: true,
       message: message,
       user: user,
+      phoneNumber: phoneNumber,
     );
   }
 
