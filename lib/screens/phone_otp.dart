@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import 'home_page.dart';
 import 'signin_screen.dart';
@@ -10,11 +11,17 @@ final authService = AuthService();
 class PhoneOTPVerificationScreen extends StatefulWidget {
   final String phoneNumber;
   final String userId;
+  final bool isLogin; // NEW: Determines if this is login 2FA or initial verification
+  final String? email; // Email for re-authentication after 2FA
+  final String? password; // Password for re-authentication after 2FA
 
   const PhoneOTPVerificationScreen({
     super.key,
     required this.phoneNumber,
     required this.userId,
+    this.isLogin = false, // Default to false for backward compatibility
+    this.email,
+    this.password,
   });
 
   @override
@@ -38,7 +45,13 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
   @override
   void initState() {
     super.initState();
-    _sendOTP();
+    // Only send OTP if this is a login 2FA (not initial verification)
+    if (widget.isLogin) {
+      _sendOTP();
+    } else {
+      // For initial verification, wait for user to request OTP
+      _sendOTP();
+    }
   }
 
   void _sendOTP() {
@@ -143,21 +156,59 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
     });
 
     if (result['success']) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Phone verified successfully!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
+      // If this is 2FA login, re-authenticate the user
+      if (widget.isLogin && widget.email != null && widget.password != null) {
+        try {
+          print('🔐 Attempting re-authentication with email: ${widget.email}');
+          
+          // Re-authenticate with email and password after OTP verification
+          UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: widget.email!,
+            password: widget.password!,
+          );
+          
+          print('✅ Re-authentication successful: ${userCredential.user?.uid}');
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Login successful!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
 
-        await Future.delayed(const Duration(seconds: 1));
+            await Future.delayed(const Duration(seconds: 1));
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-        );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomePage()),
+            );
+          }
+        } catch (e) {
+          print('❌ Re-authentication error: $e');
+          setState(() {
+            errorMessage = 'Failed to complete login: ${e.toString()}';
+          });
+        }
+      } else {
+        // Initial phone verification
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Phone verified successfully!'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          await Future.delayed(const Duration(seconds: 1));
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomePage()),
+          );
+        }
       }
     } else {
       setState(() {
@@ -183,6 +234,28 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
     _sendOTP();
   }
 
+  void _handleBack() async {
+    if (widget.isLogin) {
+      // If this is login 2FA, sign out and go back to sign-in
+      await authService.signOut();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const SignInScreen()),
+        );
+      }
+    } else {
+      // If this is initial verification, just sign out
+      await authService.signOut();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const SignInScreen()),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     for (var controller in otpControllers) {
@@ -199,17 +272,11 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Verify Phone Number'),
+        title: Text(widget.isLogin ? 'Two-Factor Authentication' : 'Verify Phone Number'),
         backgroundColor: const Color(0xFF0097B2),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () async {
-            await authService.signOut();
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => const SignInScreen()),
-            );
-          },
+          onPressed: _handleBack,
         ),
       ),
       body: SafeArea(
@@ -220,16 +287,18 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
             children: [
               const SizedBox(height: 20),
               
-              const Icon(
-                Icons.phone_android,
+              Icon(
+                widget.isLogin ? Icons.security : Icons.phone_android,
                 size: 80,
-                color: Color(0xFF0097B2),
+                color: const Color(0xFF0097B2),
               ),
               const SizedBox(height: 24),
 
-              const Text(
-                'Enter Verification Code',
-                style: TextStyle(
+              Text(
+                widget.isLogin 
+                    ? 'Verify Your Identity' 
+                    : 'Enter Verification Code',
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Roboto',
@@ -238,7 +307,9 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
               const SizedBox(height: 12),
 
               Text(
-                'We sent a 6-digit code to',
+                widget.isLogin
+                    ? 'Enter the 6-digit code sent to'
+                    : 'We sent a 6-digit code to',
                 style: TextStyle(
                   fontSize: 14,
                   color: Colors.grey[600],
@@ -357,9 +428,9 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
                             strokeWidth: 2,
                           ),
                         )
-                      : const Text(
-                          'Verify',
-                          style: TextStyle(
+                      : Text(
+                          widget.isLogin ? 'Verify & Login' : 'Verify',
+                          style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -386,15 +457,7 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
               const SizedBox(height: 8),
 
               TextButton(
-                onPressed: () async {
-                  await authService.signOut();
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const SignInScreen(),
-                    ),
-                  );
-                },
+                onPressed: _handleBack,
                 child: const Text(
                   'Back to Sign In',
                   style: TextStyle(
