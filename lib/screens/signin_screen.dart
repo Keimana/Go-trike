@@ -4,12 +4,11 @@ import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
 import '../services/auth_service.dart';
 import 'EmailVerificationScreen.dart';
-<<<<<<< HEAD
 import '../onboarding/onboarding_screen.dart';
-final authService = AuthService();
-=======
 import 'phone_otp.dart';
->>>>>>> phone-otp
+
+
+final authService = AuthService();
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
