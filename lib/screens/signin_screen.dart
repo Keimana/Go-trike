@@ -356,7 +356,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 fontFamily: 'Roboto',
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF0097B2),
+                                color: Color(0xFF1B4871),
                               ),
                             ),
                             TextSpan(
@@ -365,7 +365,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 fontFamily: 'Roboto',
                                 fontSize: 26,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFFFF9500),
+                                color: Color(0xFFEAAD39),
                               ),
                             ),
                           ],
@@ -440,7 +440,7 @@ class _SignInScreenState extends State<SignInScreen> {
                         child: Text(
                           "Forgot Password?",
                           style: TextStyle(
-                            color: _isLoading ? Colors.grey : const Color(0xFF0097B2),
+                            color: _isLoading ? Colors.grey : const Color(0xFF1B4871),
                             fontFamily: 'Roboto',
                           ),
                         ),
@@ -455,7 +455,7 @@ class _SignInScreenState extends State<SignInScreen> {
                               style: TextStyle(
                                 fontFamily: 'Roboto',
                                 fontSize: 14,
-                                color: _isLoading ? Colors.grey : const Color(0xFF0097B2),
+                                color: _isLoading ? Colors.grey : const Color(0xFF1B4871),
                               ),
                               children: [
                                 const TextSpan(text: "Don't have an account? "),

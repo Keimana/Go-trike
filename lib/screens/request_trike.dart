@@ -302,7 +302,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0097B2).withOpacity(0.1),
+                    color: const Color(0xFF1B4871).withOpacity(0.1),
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(20),
                       topRight: Radius.circular(20),
@@ -365,7 +365,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                                 'Distance',
                                 rideRequest.distance,
                                 Icons.straighten,
-                                const Color(0xFF0097B2),
+                                const Color(0xFF1B4871),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -429,7 +429,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         Navigator.of(context).pop(rideRequest); // Close bottom sheet
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0097B2),
+                        backgroundColor: const Color(0xFF1B4871),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -510,14 +510,14 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF0097B2),
-            const Color(0xFF0097B2).withOpacity(0.8),
+            const Color(0xFF1B4871),
+            const Color(0xFF1B4871).withOpacity(0.8),
           ],
         ),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0097B2).withOpacity(0.3),
+            color: const Color(0xFF1B4871).withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -723,7 +723,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         height: 16,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0097B2)),
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1B4871)),
                         ),
                       ),
                       SizedBox(width: 10),
@@ -742,9 +742,9 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0097B2).withOpacity(0.05),
+                    color: const Color(0xFF1B4871).withOpacity(0.05),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFF0097B2).withOpacity(0.2)),
+                    border: Border.all(color: const Color(0xFF1B4871).withOpacity(0.2)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -753,7 +753,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.straighten, color: Color(0xFF0097B2), size: 18),
+                            const Icon(Icons.straighten, color: Color(0xFF1B4871), size: 18),
                             const SizedBox(width: 6),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -771,7 +771,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0097B2),
+                                    color: Color(0xFF1B4871),
                                   ),
                                 ),
                               ],
@@ -784,7 +784,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            const Icon(Icons.access_time, color: Color(0xFF0097B2), size: 18),
+                            const Icon(Icons.access_time, color: Color(0xFF1B4871), size: 18),
                             const SizedBox(width: 6),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -802,7 +802,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                                   style: const TextStyle(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
-                                    color: Color(0xFF0097B2),
+                                    color: Color(0xFF1B4871),
                                   ),
                                 ),
                               ],
@@ -823,19 +823,19 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      const Color(0xFF0097B2).withOpacity(0.15),
-                      const Color(0xFF0097B2).withOpacity(0.05),
+                      const Color(0xFF1B4871).withOpacity(0.15),
+                      const Color(0xFF1B4871).withOpacity(0.05),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF0097B2).withOpacity(0.3)),
+                  border: Border.all(color: const Color(0xFF1B4871).withOpacity(0.3)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     const Row(
                       children: [
-                        Icon(Icons.payments, color: Color(0xFF0097B2), size: 28),
+                        Icon(Icons.payments, color: Color(0xFF1B4871), size: 28),
                         SizedBox(width: 12),
                         Text(
                           'Estimated Fare',
@@ -852,7 +852,7 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                       style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w700,
-                        color: Color(0xFF0097B2),
+                        color: Color(0xFF1B4871),
                       ),
                     ),
                   ],
@@ -879,12 +879,12 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                 height: 50,
                 decoration: BoxDecoration(
                   color: _selectedPaymentMethod == 'Cash'
-                      ? const Color(0xFF0097B2)
+                      ? const Color(0xFF1B4871)
                       : Colors.grey[200],
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: _selectedPaymentMethod == 'Cash'
-                        ? const Color(0xFF0097B2)
+                        ? const Color(0xFF1B4871)
                         : Colors.grey[300]!,
                     width: 2,
                   ),
@@ -928,12 +928,12 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                 height: 50,
                 decoration: BoxDecoration(
                   color: _selectedPaymentMethod == 'GCash'
-                      ? const Color(0xFF0097B2)
+                      ? const Color(0xFF1B4871)
                       : Colors.grey[200],
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: _selectedPaymentMethod == 'GCash'
-                        ? const Color(0xFF0097B2)
+                        ? const Color(0xFF1B4871)
                         : Colors.grey[300]!,
                     width: 2,
                   ),
@@ -979,12 +979,12 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                       decoration: BoxDecoration(
                         color: _isSubmitting || !hasDestination || !isRouteInfoReady
                             ? Colors.grey
-                            : const Color(0xFF0097B2),
+                            : const Color(0xFF1B4871),
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: !_isSubmitting && hasDestination && isRouteInfoReady
                             ? [
                                 BoxShadow(
-                                  color: const Color(0xFF0097B2).withOpacity(0.3),
+                                  color: const Color(0xFF1B4871).withOpacity(0.3),
                                   blurRadius: 8,
                                   offset: const Offset(0, 4),
                                 ),
@@ -1028,13 +1028,13 @@ class _RequestTrikePageState extends State<RequestTrikePage> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(30),
                         border: Border.all(
-                            color: const Color(0xFF0097B2), width: 2),
+                            color: const Color(0xFF1B4871), width: 2),
                       ),
                       child: const Center(
                         child: Text(
                           'Cancel',
                           style: TextStyle(
-                              color: Color(0xFF0097B2),
+                              color: Color(0xFF1B4871),
                               fontSize: 16,
                               fontWeight: FontWeight.w700),
                         ),

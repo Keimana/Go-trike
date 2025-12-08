@@ -107,9 +107,9 @@ class _SignInAdminState extends State<SignInAdmin> {
                             fontFamily: "Roboto",
                           ),
                           children: [
-                            TextSpan(text: "Go", style: TextStyle(color: Color(0xFF0097B2))),
+                            TextSpan(text: "Go", style: TextStyle(color: Color(0xFF1B4871))),
                             TextSpan(text: " ", style: TextStyle(color: Color(0xFF34C759))),
-                            TextSpan(text: "Trike", style: TextStyle(color: Color(0xFFFF9500))),
+                            TextSpan(text: "Trike", style: TextStyle(color: Color(0xFFEAAD39))),
                           ],
                         ),
                       ),

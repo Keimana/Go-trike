@@ -171,7 +171,7 @@ class _ReportTodaScreenState extends State<ReportTodaScreen> {
                     width: 113.38,
                     height: 60,
                     decoration: ShapeDecoration(
-                      color: const Color(0xFF0097B2),
+                      color: const Color(0xFF1B4871),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(10),
                       ),
@@ -243,7 +243,7 @@ class _ReportTodaScreenState extends State<ReportTodaScreen> {
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.location_on, size: 16, color: Color(0xFF0097B2)),
+                          const Icon(Icons.location_on, size: 16, color: Color(0xFF1B4871)),
                           SizedBox(width: w * 0.02),
                           Expanded(
                             child: Text(
@@ -319,7 +319,7 @@ class _ReportTodaScreenState extends State<ReportTodaScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Color(0xFF0097B2)),
+                      borderSide: const BorderSide(color: Color(0xFF1B4871)),
                     ),
                   ),
                 ),

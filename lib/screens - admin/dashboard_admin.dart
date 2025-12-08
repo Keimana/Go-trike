@@ -276,7 +276,7 @@ class GoTrike extends StatelessWidget {
                   TextSpan(
                     text: 'Trike',
                     style: TextStyle(
-                      color: Color(0xFFFF9500),
+                      color: Color(0xFFEAAD39),
                       fontSize: 32,
                       fontWeight: FontWeight.w700,
                     ),

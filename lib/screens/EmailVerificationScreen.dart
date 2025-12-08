@@ -165,7 +165,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Verify Email'),
-        backgroundColor: const Color(0xFF0097B2),
+        backgroundColor: const Color(0xFF1B4871),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () async {
@@ -186,7 +186,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               const Icon(
                 Icons.email_outlined,
                 size: 100,
-                color: Color(0xFF0097B2),
+                color: Color(0xFF1B4871),
               ),
               const SizedBox(height: 32),
               
@@ -244,7 +244,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
               const SizedBox(height: 24),
               
               const CircularProgressIndicator(
-                color: Color(0xFF0097B2),
+                color: Color(0xFF1B4871),
               ),
               const SizedBox(height: 16),
               
@@ -305,7 +305,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                       : 'Resend in ${resendCooldown}s',
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0097B2),
+                  backgroundColor: const Color(0xFF1B4871),
                   disabledBackgroundColor: Colors.grey,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 24,
@@ -328,7 +328,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
                 child: const Text(
                   'Back to Sign In',
                   style: TextStyle(
-                    color: Color(0xFF0097B2),
+                    color: Color(0xFF1B4871),
                     fontFamily: 'Roboto',
                   ),
                 ),

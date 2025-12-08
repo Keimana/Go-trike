@@ -195,7 +195,7 @@ class CardBuilderPassengerTerminal extends StatelessWidget {
             children: [
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0097B2),
+                  backgroundColor: const Color(0xFF1B4871),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),

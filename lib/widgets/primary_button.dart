@@ -20,7 +20,7 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color btnColor = color ?? const Color(0xFF0097B2);
+    final Color btnColor = color ?? const Color(0xFF1B4871);
 
     return ElevatedButton(
       onPressed: onPressed,

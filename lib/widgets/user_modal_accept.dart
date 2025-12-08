@@ -67,7 +67,7 @@ void showDriverOnWayModal(BuildContext context, String todaNumber) {
                   color: const Color(0xFFE8F8FB),
                   borderRadius: BorderRadius.circular(10),
                   border: Border.all(
-                    color: const Color(0xFF0097B2),
+                    color: const Color(0xFF1B4871),
                     width: 1.5,
                   ),
                 ),
@@ -76,7 +76,7 @@ void showDriverOnWayModal(BuildContext context, String todaNumber) {
                   children: [
                     const Icon(
                       Icons.local_taxi,
-                      color: Color(0xFF0097B2),
+                      color: Color(0xFF1B4871),
                       size: 20,
                     ),
                     const SizedBox(width: 8),
@@ -91,7 +91,7 @@ void showDriverOnWayModal(BuildContext context, String todaNumber) {
                     Text(
                       todaNumber,
                       style: const TextStyle(
-                        color: Color(0xFF0097B2),
+                        color: Color(0xFF1B4871),
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
@@ -112,7 +112,7 @@ void showDriverOnWayModal(BuildContext context, String todaNumber) {
                   height: 50,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0097B2),
+                    color: const Color(0xFF1B4871),
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.white),
                   ),

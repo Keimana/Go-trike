@@ -36,7 +36,7 @@ class HelpScreen extends StatelessWidget {
                   TextSpan(
                     text: 'Go',
                     style: TextStyle(
-                      color: const Color(0xFF0097B2),
+                      color: const Color(0xFF1B4871),
                       fontSize: w * 0.08,
                       fontFamily: 'Roboto',
                       fontWeight: FontWeight.w700,
@@ -54,7 +54,7 @@ class HelpScreen extends StatelessWidget {
                   TextSpan(
                     text: 'Trike',
                     style: TextStyle(
-                      color: const Color(0xFFFF9500),
+                      color: const Color(0xFFEAAD39),
                       fontSize: w * 0.08,
                       fontFamily: 'Roboto',
                       fontWeight: FontWeight.w700,

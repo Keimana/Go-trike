@@ -273,7 +273,7 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isLogin ? 'Two-Factor Authentication' : 'Verify Phone Number'),
-        backgroundColor: const Color(0xFF0097B2),
+        backgroundColor: const Color(0xFF1B4871),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: _handleBack,
@@ -290,7 +290,7 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
               Icon(
                 widget.isLogin ? Icons.security : Icons.phone_android,
                 size: 80,
-                color: const Color(0xFF0097B2),
+                color: const Color(0xFF1B4871),
               ),
               const SizedBox(height: 24),
 
@@ -350,14 +350,14 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: const BorderSide(
-                            color: Color(0xFF0097B2),
+                            color: Color(0xFF1B4871),
                             width: 2,
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: const BorderSide(
-                            color: Color(0xFF0097B2),
+                            color: Color(0xFF1B4871),
                             width: 3,
                           ),
                         ),
@@ -413,7 +413,7 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
                 child: ElevatedButton(
                   onPressed: isVerifying ? null : _verifyOTP,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0097B2),
+                    backgroundColor: const Color(0xFF1B4871),
                     disabledBackgroundColor: Colors.grey,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -448,7 +448,7 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
                       ? 'Resend OTP'
                       : 'Resend OTP in ${resendCooldown}s',
                   style: TextStyle(
-                    color: canResend ? const Color(0xFF0097B2) : Colors.grey,
+                    color: canResend ? const Color(0xFF1B4871) : Colors.grey,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -461,7 +461,7 @@ class _PhoneOTPVerificationScreenState extends State<PhoneOTPVerificationScreen>
                 child: const Text(
                   'Back to Sign In',
                   style: TextStyle(
-                    color: Color(0xFF0097B2),
+                    color: Color(0xFF1B4871),
                     fontFamily: 'Roboto',
                   ),
                 ),

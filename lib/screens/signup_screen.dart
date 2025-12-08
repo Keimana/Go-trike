@@ -586,7 +586,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               fontFamily: 'Roboto',
               fontSize: 26,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF0097B2),
+              color: Color(0xFF1B4871),
             ),
           ),
           TextSpan(
@@ -595,7 +595,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               fontFamily: 'Roboto',
               fontSize: 26,
               fontWeight: FontWeight.bold,
-              color: Color(0xFFFF9500),
+              color: Color(0xFFEAAD39),
             ),
           ),
         ],
@@ -714,7 +714,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
               fontSize: 14,
               color: _isLoading
                   ? Colors.grey
-                  : const Color(0xFF0097B2),
+                  : const Color(0xFF1B4871),
             ),
             children: [
               const TextSpan(text: "Have an account? "),

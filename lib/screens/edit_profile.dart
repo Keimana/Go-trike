@@ -381,7 +381,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     TextSpan(
                       text: 'Go',
                       style: TextStyle(
-                        color: const Color(0xFF0097B2),
+                        color: const Color(0xFF1B4871),
                         fontSize: w * 0.08,
                         fontFamily: 'Roboto',
                         fontWeight: FontWeight.w700,
@@ -391,7 +391,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     TextSpan(
                       text: 'Trike',
                       style: TextStyle(
-                        color: const Color(0xFFFF9500),
+                        color: const Color(0xFFEAAD39),
                         fontSize: w * 0.08,
                         fontFamily: 'Roboto',
                         fontWeight: FontWeight.w700,
@@ -416,7 +416,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 height: h * 0.065,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0097B2),
+                    backgroundColor: const Color(0xFF1B4871),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),

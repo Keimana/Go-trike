@@ -79,7 +79,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       fontFamily: 'Roboto',
                       fontSize: 40,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF0097B2),
+                      color: Color(0xFF1B4871),
                     ),
                   ),
                   TextSpan(
@@ -88,7 +88,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       fontFamily: 'Roboto',
                       fontSize: 40,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFFFF9500),
+                      color: Color(0xFFEAAD39),
                     ),
                   ),
                 ],
@@ -99,7 +99,7 @@ class _SplashScreenState extends State<SplashScreen> {
             
             // Loading indicator
             const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0097B2)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1B4871)),
             ),
           ],
         ),

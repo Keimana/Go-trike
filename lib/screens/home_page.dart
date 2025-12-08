@@ -716,7 +716,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Row(
           children: [
-            Icon(Icons.pin_drop, color: Color(0xFF0097B2), size: 28),
+            Icon(Icons.pin_drop, color: Color(0xFF1B4871), size: 28),
             SizedBox(width: 12),
             Expanded(
               child: Text(
@@ -768,7 +768,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
               _completeRide(rideRequest);
             },
             style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFF0097B2),
+              backgroundColor: const Color(0xFF1B4871),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text(
@@ -870,7 +870,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
               _showSnackBar('✅ You can now request another ride', Colors.green);
             },
             style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFF0097B2),
+              backgroundColor: const Color(0xFF1B4871),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
@@ -907,7 +907,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFF0097B2),
+              backgroundColor: const Color(0xFF1B4871),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -940,7 +940,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             style: TextButton.styleFrom(
-              backgroundColor: const Color(0xFF0097B2),
+              backgroundColor: const Color(0xFF1B4871),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
             child: const Text('OK', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
@@ -1186,7 +1186,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
                           Icon(
                             _selectedDestinationLocation != null ? Icons.check_circle : Icons.add_circle_outline,
                             size: 30,
-                            color: _selectedDestinationLocation != null ? Colors.green : const Color(0xFF0097B2),
+                            color: _selectedDestinationLocation != null ? Colors.green : const Color(0xFF1B4871),
                           ),
                         ],
                       ),
@@ -1199,22 +1199,22 @@ class _MainScreenContentState extends State<MainScreenContent> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0097B2).withOpacity(0.05),
+                      color: const Color(0xFF1B4871).withOpacity(0.05),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF0097B2).withOpacity(0.2)),
+                      border: Border.all(color: const Color(0xFF1B4871).withOpacity(0.2)),
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
                         Row(
                           children: [
-                            const Icon(Icons.straighten, color: Color(0xFF0097B2), size: 18),
+                            const Icon(Icons.straighten, color: Color(0xFF1B4871), size: 18),
                             const SizedBox(width: 6),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text('Distance', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600)),
-                                Text(_distanceText!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0097B2))),
+                                Text(_distanceText!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1B4871))),
                               ],
                             ),
                           ],
@@ -1222,13 +1222,13 @@ class _MainScreenContentState extends State<MainScreenContent> {
                         Container(width: 1, height: 30, color: Colors.grey[300]),
                         Row(
                           children: [
-                            const Icon(Icons.access_time, color: Color(0xFF0097B2), size: 18),
+                            const Icon(Icons.access_time, color: Color(0xFF1B4871), size: 18),
                             const SizedBox(width: 6),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 const Text('ETA', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w600)),
-                                Text(_durationText!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0097B2))),
+                                Text(_durationText!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1B4871))),
                               ],
                             ),
                           ],
@@ -1247,7 +1247,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
                         SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0097B2))),
+                          child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1B4871))),
                         ),
                         SizedBox(width: 10),
                         Text('Calculating route...', style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w600)),
@@ -1374,9 +1374,9 @@ class _MainScreenContentState extends State<MainScreenContent> {
               width: buttonWidth,
               height: 60.0,
               decoration: ShapeDecoration(
-                color: canRequestRide ? const Color(0xFF0097B2) : Colors.grey,
+                color: canRequestRide ? const Color(0xFF1B4871) : Colors.grey,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                shadows: canRequestRide ? [BoxShadow(color: const Color(0xFF0097B2).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))] : null,
+                shadows: canRequestRide ? [BoxShadow(color: const Color(0xFF1B4871).withOpacity(0.3), blurRadius: 12, offset: const Offset(0, 6))] : null,
               ),
               alignment: Alignment.center,
               child: Text(

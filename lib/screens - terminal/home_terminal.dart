@@ -278,14 +278,14 @@ Future<BitmapDescriptor> _createUserMarker() async {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.map_outlined, color: Color(0xFF0097B2), size: 16),
+                    Icon(Icons.map_outlined, color: Color(0xFF1B4871), size: 16),
                     SizedBox(width: 6),
                     Text(
                       "Map Legend",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: Color(0xFF0097B2),
+                        color: Color(0xFF1B4871),
                       ),
                     ),
                   ],
@@ -308,7 +308,7 @@ Future<BitmapDescriptor> _createUserMarker() async {
                     padding: const EdgeInsets.only(right: 20, top: 10),
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0097B2),
+                        backgroundColor: const Color(0xFF1B4871),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -335,7 +335,7 @@ Future<BitmapDescriptor> _createUserMarker() async {
                   padding: const EdgeInsets.all(20),
                   width: double.infinity,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0097B2).withOpacity(0.9),
+                    color: const Color(0xFF1B4871).withOpacity(0.9),
                     borderRadius: BorderRadius.circular(30),
                   ),
                   child: Center(

@@ -138,7 +138,7 @@ class ActivityLogsScreen extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         const CircularProgressIndicator(
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0097B2)),
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1B4871)),
                         ),
                         SizedBox(height: h * 0.02),
                         const Text(
@@ -187,7 +187,7 @@ class ActivityLogsScreen extends StatelessWidget {
                             (context as Element).markNeedsBuild();
                           },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF0097B2),
+                            backgroundColor: const Color(0xFF1B4871),
                           ),
                           child: const Text('Retry'),
                         ),

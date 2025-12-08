@@ -101,7 +101,7 @@ class _TerminalModalAcceptState extends State<TerminalModalAccept> {
                 OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     minimumSize: const Size(120, 50),
-                    side: const BorderSide(color: Color(0xFF0097B2)),
+                    side: const BorderSide(color: Color(0xFF1B4871)),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -110,7 +110,7 @@ class _TerminalModalAcceptState extends State<TerminalModalAccept> {
                   child: const Text(
                     "Cancel",
                     style: TextStyle(
-                      color: Color(0xFF0097B2),
+                      color: Color(0xFF1B4871),
                       fontSize: 16,
                     ),
                   ),

@@ -53,9 +53,9 @@ class _ReportTodaCheckboxState extends State<ReportTodaCheckbox> {
           ),
           Checkbox(
             value: isChecked,
-            activeColor: const Color(0xFF0097B2), // color when checked
+            activeColor: const Color(0xFF1B4871), // color when checked
             side: const BorderSide(
-              color: Color(0xFF0097B2), // border color
+              color: Color(0xFF1B4871), // border color
               width: 2, // adjust thickness if needed
             ),
             onChanged: (value) {

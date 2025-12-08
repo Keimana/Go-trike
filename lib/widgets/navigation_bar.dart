@@ -80,7 +80,7 @@ class BottomNavigationBarWidget extends StatelessWidget {
                     width: circleSize,
                     height: circleSize,
                     decoration: const ShapeDecoration(
-                      color: Color(0xFF0097B2),
+                      color: Color(0xFF1B4871),
                       shape: OvalBorder(),
                     ),
                   ),
