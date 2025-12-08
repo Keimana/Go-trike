@@ -1,0 +1,11 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Launch Android Emulator",
+      "type": "shell",
+      "command": "\"${env:ANDROID_SDK_ROOT}\\emulator\\emulator.exe\" -avd Pixel_5_API_33",
+      "problemMatcher": []
+    }
+  ]
+}

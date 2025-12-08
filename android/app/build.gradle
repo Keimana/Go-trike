@@ -1,0 +1,119 @@
+plugins { 
+    id "com.android.application" 
+    // START: FlutterFire Configuration 
+    id 'com.google.gms.google-services' 
+    // END: FlutterFire Configuration 
+    id "kotlin-android" 
+    id "dev.flutter.flutter-gradle-plugin" 
+} 
+ 
+def localProperties = new Properties() 
+def localPropertiesFile = rootProject.file('local.properties') 
+if (localPropertiesFile.exists()) { 
+    localPropertiesFile.withReader('UTF-8') { reader -> 
+        localProperties.load(reader) 
+    } 
+}
+
+//Load keystore properties
+def keystoreProperties = new Properties()
+def keystorePropertiesFile = rootProject.file('gradle.properties')
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+ 
+def flutterVersionCode = localProperties.getProperty('flutter.versionCode') 
+if (flutterVersionCode == null) { 
+    flutterVersionCode = '1' 
+} 
+ 
+def flutterVersionName = localProperties.getProperty('flutter.versionName') 
+if (flutterVersionName == null) { 
+    flutterVersionName = '1.0' 
+} 
+ 
+android { 
+    namespace "com.example.demo_app" 
+    compileSdk flutter.compileSdkVersion 
+    ndkVersion rootProject.ext.has("ndkVersion") ? rootProject.ext.ndkVersion : "26.1.10909125" 
+ 
+    compileOptions { 
+        //Force Java 11 for Firebase & Google Maps 
+        sourceCompatibility JavaVersion.VERSION_11 
+        targetCompatibility JavaVersion.VERSION_11 
+    } 
+ 
+    kotlinOptions { 
+        jvmTarget = "11" 
+    } 
+ 
+    sourceSets { 
+        main.java.srcDirs += 'src/main/kotlin' 
+    } 
+ 
+    defaultConfig { 
+        applicationId "com.example.demo_app" 
+ 
+        //Firebase Auth now requires minSdk 23 
+        minSdkVersion 23 
+ 
+        //Match Flutter's recommended target 
+        targetSdkVersion flutter.targetSdkVersion 
+ 
+        versionCode flutterVersionCode.toInteger() 
+        versionName flutterVersionName 
+ 
+        //Prevent dexing issues when using Firebase 
+        multiDexEnabled true 
+         
+        // Set manifest placeholder 
+        manifestPlaceholders = [ 
+            GOOGLE_MAPS_API_KEY: localProperties.getProperty('GOOGLE_MAPS_API_KEY', '') 
+        ] 
+    } 
+     
+    //Fixed: Properly load keystore from gradle.properties
+    signingConfigs { 
+        release { 
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['MYAPP_UPLOAD_STORE_FILE'])
+                storePassword keystoreProperties['MYAPP_UPLOAD_STORE_PASSWORD']
+                keyAlias keystoreProperties['MYAPP_UPLOAD_KEY_ALIAS']
+                keyPassword keystoreProperties['MYAPP_UPLOAD_KEY_PASSWORD']
+            }
+        } 
+    } 
+ 
+    buildTypes { 
+        release { 
+            signingConfig signingConfigs.release 
+            minifyEnabled false    // Disable shrinking until release signing is set 
+            shrinkResources false 
+        } 
+    } 
+} 
+ 
+flutter { 
+    source '../..' 
+} 
+ 
+dependencies { 
+    // Force Kotlin version to match your top-level build.gradle (1.8.22) 
+    configurations.all { 
+        resolutionStrategy { 
+            force "org.jetbrains.kotlin:kotlin-stdlib:1.8.22" 
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22" 
+            force "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22" 
+        } 
+    } 
+    
+    // Firebase BOM
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    
+    // Firebase Authentication
+    implementation 'com.google.firebase:firebase-auth'
+    
+    // Google Play Services
+    implementation 'com.google.android.gms:play-services-auth:21.2.0'
+    implementation 'com.google.android.gms:play-services-safetynet:18.1.0'
+}
