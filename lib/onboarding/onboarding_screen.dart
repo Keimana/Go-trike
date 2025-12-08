@@ -201,7 +201,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           fontFamily: 'Roboto',
                           fontSize: 50,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF0097B2),
+                          color: Color(0xFF1B4871),
                         ),
                       ),
                       TextSpan(
@@ -210,7 +210,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           fontFamily: 'Roboto',
                           fontSize: 50,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFFFF9500),
+                          color: Color(0xFFEAAD39),
                         ),
                       ),
                     ],

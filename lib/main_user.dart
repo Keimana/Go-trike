@@ -34,7 +34,7 @@ class GoTrikeApp extends StatelessWidget {
       theme: ThemeData(
         fontFamily: 'Roboto',
         scaffoldBackgroundColor: Colors.white,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0097B2)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1B4871)),
       ),
       // CHANGE: Start with splash screen instead of signin
       initialRoute: '/',
