@@ -3,7 +3,7 @@
     <uses-permission android:name="android.permission.RECEIVE_SMS"/>
     <uses-permission android:name="android.permission.READ_SMS"/>
     <application
-        android:label="demo_app"
+        android:label="Go Trike"
         android:icon="@mipmap/ic_launcher">
 
         <meta-data
