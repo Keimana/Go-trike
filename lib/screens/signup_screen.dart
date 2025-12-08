@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../widgets/custom_text_field.dart';
 import '../widgets/primary_button.dart';
 import '../services/auth_service.dart';
-import 'EmailVerificationScreen.dart';
+import 'EmailVerificationScreen.dart'; // Back to email verification first
 
 /// Sign up screen for new user registration
 class SignUpScreen extends StatefulWidget {
@@ -265,6 +265,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
       'email': email,
       'emailVerified': false,
       'phoneVerified': false,
+      'onboardingCompleted': false, // Track onboarding status
       'createdAt': FieldValue.serverTimestamp(),
     };
 
@@ -315,6 +316,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         'email': email,
         'emailVerified': false,
         'phoneVerified': false,
+        'onboardingCompleted': false,
         'created': DateTime.now().toIso8601String(),
       };
 
@@ -429,7 +431,8 @@ class _SignUpScreenState extends State<SignUpScreen> {
         debugPrint('Registration completed successfully');
         _showSuccessMessage();
         
-        // Navigate to email verification screen
+        // Navigate to email verification screen FIRST
+        // After email is verified, the EmailVerificationScreen will handle navigation to onboarding
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(

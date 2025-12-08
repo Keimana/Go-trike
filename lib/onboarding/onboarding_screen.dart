@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../screens/home_page.dart';
+import '../services/onboarding_service.dart'; // Add this import
 
 class OnboardingScreen extends StatefulWidget {
-  final String? userId; // true = show after login
+  final String? userId; // Pass userId if user is logged in
 
   const OnboardingScreen({this.userId, Key? key}) : super(key: key);
 
@@ -68,13 +69,20 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     },
   ];
 
-  void finishOnboarding() {
+  Future<void> finishOnboarding() async {
+    // Mark onboarding as completed
+    await OnboardingService.completeOnboarding();
+
+    if (!mounted) return;
+
     if (widget.userId != null) {
+      // User is logged in, go to home
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
     } else {
+      // User is not logged in, go to sign in
       Navigator.pushReplacementNamed(context, '/signin');
     }
   }
@@ -92,7 +100,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 setState(() => isLastPage = index == onboardingPages.length - 1),
             itemBuilder: (context, index) {
               final page = onboardingPages[index];
-              return buildPage(page, index: index); // pass the index here
+              return buildPage(page, index: index);
             },
           ),
 
@@ -173,76 +181,74 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-Widget buildPage(Map<String, dynamic> page, {required int index}) {
-  return SingleChildScrollView(
-    padding: page['padding'] ?? const EdgeInsets.all(40),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        // Only show "Go Trike" on the first page
-        if (index == 0)
-          Column(
-            children: const [
-              SizedBox(height: 60), // top spacing
-              Text.rich(
-                TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'Go ',
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 50,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF0097B2),
+  Widget buildPage(Map<String, dynamic> page, {required int index}) {
+    return SingleChildScrollView(
+      padding: page['padding'] ?? const EdgeInsets.all(40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          // Only show "Go Trike" on the first page
+          if (index == 0)
+            Column(
+              children: const [
+                SizedBox(height: 60),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Go ',
+                        style: TextStyle(
+                          fontFamily: 'Roboto',
+                          fontSize: 50,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF0097B2),
+                        ),
                       ),
-                    ),
-                    TextSpan(
-                      text: 'Trike',
-                      style: TextStyle(
-                        fontFamily: 'Roboto',
-                        fontSize: 50,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFFF9500),
+                      TextSpan(
+                        text: 'Trike',
+                        style: TextStyle(
+                          fontFamily: 'Roboto',
+                          fontSize: 50,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFFFF9500),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: 70),
-            ],
+                SizedBox(height: 70),
+              ],
+            ),
+
+          // Top spacing for pages 2–7
+          if (index != 0) const SizedBox(height: 150),
+
+          // Image
+          Image.asset(page['image'], height: page['height'] ?? 280),
+          const SizedBox(height: 80),
+
+          // Title above description
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            child: Text(
+              page['title'],
+              style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
+              textAlign: TextAlign.center,
+            ),
           ),
 
-        // Top spacing for pages 2–7
-        if (index != 0)
-          const SizedBox(height: 150), // adjust height as needed
-
-        // Image
-        Image.asset(page['image'], height: page['height'] ?? 280),
-        const SizedBox(height: 80),
-
-        // Title above description
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-          child: Text(
-            page['title'],
-            style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
-            textAlign: TextAlign.center,
+          // Description
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
+            child: Text(
+              page['desc'],
+              style: const TextStyle(fontSize: 17, color: Colors.black54, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
           ),
-        ),
-
-        // Description
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-          child: Text(
-            page['desc'],
-            style: const TextStyle(fontSize: 17, color: Colors.black54, height: 1.5),
-            textAlign: TextAlign.center,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
+        ],
+      ),
+    );
+  }
 }

@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
-import 'home_page.dart';
+import '../onboarding/onboarding_screen.dart'; // Changed from home_page
 import 'signin_screen.dart';
 
 final authService = AuthService();
@@ -81,7 +81,7 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
       print('🔍 Checking email verification: $emailVerified');
       
       if (emailVerified) {
-        print('✅ Email verified! Proceeding to home...');
+        print('✅ Email verified! Proceeding to onboarding...');
         
         setState(() {
           isEmailVerified = true;
@@ -102,9 +102,17 @@ class _EmailVerificationScreenState extends State<EmailVerificationScreen> {
           await Future.delayed(const Duration(seconds: 1));
           
           if (mounted) {
+            // Get current user ID
+            final currentUser = FirebaseAuth.instance.currentUser;
+            
+            // Navigate to onboarding screen with userId
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (context) => const HomePage()),
+              MaterialPageRoute(
+                builder: (context) => OnboardingScreen(
+                  userId: currentUser?.uid,
+                ),
+              ),
             );
           }
         }

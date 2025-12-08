@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart'; // Remove duplicate
+import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'firebase_options.dart';
 import 'screens/signup_screen.dart';
@@ -8,13 +8,14 @@ import 'screens/home_page.dart';
 import 'screens/edit_profile.dart';
 import 'screens/help.dart';
 import 'screens/signin_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-// Add this line to ensure Firestore is properly initialized
+  // Ensure Firestore is properly initialized
   FirebaseFirestore.instance.settings = const Settings(
     persistenceEnabled: true,
   );
@@ -35,16 +36,16 @@ class GoTrikeApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.white,
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0097B2)),
       ),
-      // first screen to open
+      // CHANGE: Start with splash screen instead of signin
       initialRoute: '/',
       routes: {
-        '/': (context) => const SignInScreen(),
-        '/signin': (context) => const HomePage(),
+        '/': (context) => const SplashScreen(), // CHANGED FROM SignInScreen
+        '/signin': (context) => const SignInScreen(), // FIXED - was pointing to HomePage
+        '/home': (context) => const HomePage(), // ADD THIS
         '/signup': (context) => const SignUpScreen(),
         '/forgot': (context) => ForgotPasswordScreen(),
         '/edit-profile': (context) => const EditProfileScreen(),
         '/help': (context) => const HelpScreen(),
-
       },
     );
   }
