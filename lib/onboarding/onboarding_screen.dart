@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../screens/home_page.dart';
-import '../services/onboarding_service.dart'; // Add this import
 
 class OnboardingScreen extends StatefulWidget {
-  final String? userId; // Pass userId if user is logged in
+  final String? userId;
 
   const OnboardingScreen({this.userId, Key? key}) : super(key: key);
 
@@ -16,7 +17,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final PageController _controller = PageController();
   bool isLastPage = false;
 
-  // Onboarding pages with custom height and padding
   final List<Map<String, dynamic>> onboardingPages = [
     {
       "image": "assets/images/trike.png",
@@ -70,20 +70,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   Future<void> finishOnboarding() async {
-    // Mark onboarding as completed
-    await OnboardingService.completeOnboarding();
+    try {
+      final userId = widget.userId ?? FirebaseAuth.instance.currentUser?.uid;
+      
+      if (userId == null) {
+        debugPrint('No user ID available during onboarding completion');
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/signin');
+        }
+        return;
+      }
 
-    if (!mounted) return;
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .update({'onboardingCompleted': true});
 
-    if (widget.userId != null) {
-      // User is logged in, go to home
+      debugPrint('Onboarding completed for user: $userId');
+
+      if (!mounted) return;
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const HomePage()),
       );
-    } else {
-      // User is not logged in, go to sign in
-      Navigator.pushReplacementNamed(context, '/signin');
+    } catch (e) {
+      debugPrint('Error completing onboarding: $e');
+      
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomePage()),
+        );
+      }
     }
   }
 
@@ -92,7 +111,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          // PageView with dynamic pages
           PageView.builder(
             controller: _controller,
             itemCount: onboardingPages.length,
@@ -104,7 +122,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             },
           ),
 
-          // Bottom controls
           Positioned(
             bottom: 40,
             left: 30,
@@ -112,7 +129,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // SmoothPageIndicator dots
                 SmoothPageIndicator(
                   controller: _controller,
                   count: onboardingPages.length,
@@ -121,11 +137,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // Buttons row: Back | Skip | Next/Done
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Back button
                     GestureDetector(
                       onTap: () {
                         if (_controller.page! > 0) {
@@ -145,7 +159,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
 
-                    // Skip button (center)
                     GestureDetector(
                       onTap: finishOnboarding,
                       child: const Text(
@@ -154,7 +167,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       ),
                     ),
 
-                    // Next / Done button
                     GestureDetector(
                       onTap: () {
                         if (isLastPage) {
@@ -187,7 +199,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Only show "Go Trike" on the first page
           if (index == 0)
             Column(
               children: const [
@@ -221,14 +232,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ],
             ),
 
-          // Top spacing for pages 2–7
           if (index != 0) const SizedBox(height: 150),
 
-          // Image
           Image.asset(page['image'], height: page['height'] ?? 280),
           const SizedBox(height: 80),
 
-          // Title above description
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
             child: Text(
@@ -238,7 +246,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             ),
           ),
 
-          // Description
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
             child: Text(

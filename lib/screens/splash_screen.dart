@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/onboarding_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../screens/home_page.dart';
-import '../onboarding/onboarding_screen.dart';
 import '../screens/signin_screen.dart';
+import '../onboarding/onboarding_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({Key? key}) : super(key: key);
@@ -20,38 +20,79 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAppState() async {
-    // Add a small delay for splash screen visibility
     await Future.delayed(const Duration(seconds: 2));
 
     if (!mounted) return;
 
-    // Check if user has seen onboarding
-    final hasSeenOnboarding = await OnboardingService.hasSeenOnboarding();
-    
-    // Check if user is logged in
-    final currentUser = FirebaseAuth.instance.currentUser;
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
 
-    if (!hasSeenOnboarding) {
-      // First time user - show onboarding
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OnboardingScreen(userId: currentUser?.uid),
-        ),
-      );
-    } else if (currentUser != null && currentUser.emailVerified) {
-      // Returning user who is logged in and verified - go to home
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const HomePage()),
-      );
-    } else {
-      // Returning user who is not logged in - go to sign in
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const SignInScreen()),
-      );
+      if (currentUser == null) {
+        _navigateToSignIn();
+        return;
+      }
+
+      await currentUser.reload();
+      final refreshedUser = FirebaseAuth.instance.currentUser;
+      
+      if (refreshedUser == null || !refreshedUser.emailVerified) {
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        _navigateToSignIn();
+        return;
+      }
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(refreshedUser.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        await FirebaseAuth.instance.signOut();
+        if (!mounted) return;
+        _navigateToSignIn();
+        return;
+      }
+
+      final userData = userDoc.data();
+      final hasCompletedOnboarding = userData?['onboardingCompleted'] ?? false;
+
+      if (!hasCompletedOnboarding) {
+        _navigateToOnboarding(refreshedUser.uid);
+        return;
+      }
+
+      _navigateToHome();
+
+    } catch (e) {
+      debugPrint('Error in splash screen: $e');
+      await FirebaseAuth.instance.signOut();
+      if (!mounted) return;
+      _navigateToSignIn();
     }
+  }
+
+  void _navigateToSignIn() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const SignInScreen()),
+    );
+  }
+
+  void _navigateToOnboarding(String userId) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OnboardingScreen(userId: userId),
+      ),
+    );
+  }
+
+  void _navigateToHome() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const HomePage()),
+    );
   }
 
   @override
@@ -62,14 +103,12 @@ class _SplashScreenState extends State<SplashScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // App Logo
             Image.asset(
               'assets/images/trike.png',
               height: 200,
             ),
             const SizedBox(height: 30),
             
-            // App Name
             const Text.rich(
               TextSpan(
                 children: [
@@ -97,7 +136,6 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 50),
             
-            // Loading indicator
             const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1B4871)),
             ),
