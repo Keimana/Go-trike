@@ -22,50 +22,50 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       "image": "assets/images/trike.png",
       "title": "Welcome!",
       "desc": "Go Trike App",
-      "height": 300.0,
-      "padding": const EdgeInsets.only(top: 40),
+      "height": 200.0,
+      "padding": const EdgeInsets.only(top: 20),
     },
     {
       "image": "assets/images/onboard2.png",
       "title": "Book a Ride",
       "desc": "Select pickup and wait for driver",
       "height": 280.0,
-      "padding": EdgeInsets.zero,
+      "padding": const EdgeInsets.only(top: 20)
     },
     {
       "image": "assets/images/onboard3.png",
       "title": "Ride History",
       "desc": "Select your drop-off",
       "height": 280.0,
-      "padding": EdgeInsets.zero,
+      "padding": const EdgeInsets.only(top: 20)
     },
     {
       "image": "assets/images/onboard4.png",
       "title": "Payment Method",
       "desc": "Select payment method (Cash or GCash)",
       "height": 280.0,
-      "padding": EdgeInsets.zero,
+      "padding": const EdgeInsets.only(top: 20)
     },
     {
       "image": "assets/images/onboard5.png",
       "title": "Wait a Driver",
       "desc": "Wait for a driver to pick you up",
       "height": 280.0,
-      "padding": EdgeInsets.zero,
+      "padding": const EdgeInsets.only(top: 20)
     },
     {
       "image": "assets/images/onboard6.png",
       "title": "Account Settings",
       "desc": "This is your account settings",
       "height": 280.0,
-      "padding": EdgeInsets.zero,
+      "padding": const EdgeInsets.only(top: 20)
     },
     {
       "image": "assets/images/onboard7.png",
       "title": "have a great day!",
       "desc": "Enjoy Riding!",
       "height": 280.0,
-      "padding": EdgeInsets.zero,
+      "padding": const EdgeInsets.only(top: 20)
     },
   ];
 
