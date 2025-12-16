@@ -23,7 +23,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       "title": "Welcome!",
       "desc": "Go Trike App",
       "height": 300.0,
-      "padding": const EdgeInsets.only(top: 50),
+      "padding": const EdgeInsets.only(top: 40),
     },
     {
       "image": "assets/images/onboard2.png",
@@ -259,3 +259,4 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 }
+
