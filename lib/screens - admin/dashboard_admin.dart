@@ -331,7 +331,7 @@ class ReportsContent extends StatelessWidget {
             _HeaderConfig('Issues', flex: 3),
             _HeaderConfig('Comments', flex: 2),
             _HeaderConfig('Reporter', flex: 2),
-            _HeaderConfig('Toda #', flex: 2),
+            _HeaderConfig('Trike #', flex: 2),
           ],
           rows: displayReports,
           builder: (report, index) => [
@@ -373,7 +373,7 @@ class ActivityLogsContent extends StatelessWidget {
 
         return _buildDataTable(
           headers: const [
-            _HeaderConfig('Toda', flex: 3),
+            _HeaderConfig('Trike', flex: 3),
             _HeaderConfig('Accepted', flex: 2),
             _HeaderConfig('Rejected', flex: 2),
           ],
@@ -546,7 +546,7 @@ class TrikeDriverListContent extends StatelessWidget {
         return _buildDataTable(
           headers: const [
             _HeaderConfig('Driver', flex: 3),
-            _HeaderConfig('Toda', flex: 3),
+            _HeaderConfig('Trike', flex: 3),
           ],
           rows: displayDrivers,
           builder: (driver, index) => [

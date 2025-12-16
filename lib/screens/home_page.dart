@@ -656,11 +656,10 @@ class _MainScreenContentState extends State<MainScreenContent> {
         return;
       }
 
-      // Remove the automatic arrived modal - we're using manual check now
-      // if (rideRequest.status == RideStatus.arrived && !_hasShownArrivedModal) {
-      //   _handleDriverArrived(rideRequest);
-      //   return;
-      // }
+      if (rideRequest.status == RideStatus.arrived && !_hasShownArrivedModal) {
+        _handleDriverArrived(rideRequest);
+        return;
+      }
 
       final isPending = rideRequest.status == RideStatus.pending;
       if (_hasPendingRide != isPending && mounted) {
@@ -701,12 +700,88 @@ class _MainScreenContentState extends State<MainScreenContent> {
     });
     showDriverOnWayModal(context, rideRequest.todaNumber ?? 'N/A');
     
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted && _activeRideId == rideRequest.id) {
-        _showPeriodicArrivalCheckDialog(rideRequest);
-      }
-    });
+      Future.delayed(const Duration(minutes: 5), () {
+        if (mounted && _activeRideId == rideRequest.id) {
+          _showPeriodicArrivalCheckDialog(rideRequest);
+        }
+      });
   }
+
+void _handleDriverArrived(RideRequest rideRequest) {
+  _hasShownArrivedModal = true;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Row(
+        children: [
+          Icon(Icons.directions_car, color: Color(0xFF1B4871), size: 28),
+          SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Driver Arrived',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Has your trip reached the destination?',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'TODA Number: ${rideRequest.todaNumber ?? 'N/A'}',
+            style: const TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop();
+            // allow future arrival prompts and re-schedule in 1 minute
+            setState(() {
+              _hasShownArrivedModal = false;
+            });
+            Future.delayed(const Duration(minutes: 1), () {
+              if (mounted && _activeRideId == rideRequest.id) {
+                _handleDriverArrived(rideRequest);
+              }
+            });
+          },
+          style: TextButton.styleFrom(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Text(
+            'Not Yet',
+            style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+          ),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.of(context).pop();
+            await _completeRide(rideRequest);
+          },
+          style: TextButton.styleFrom(
+            backgroundColor: const Color(0xFF1B4871),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+          child: const Text(
+            'Yes, Arrived',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
   void _showPeriodicArrivalCheckDialog(RideRequest rideRequest) {
     showDialog(
@@ -748,7 +823,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              Future.delayed(const Duration(seconds: 30), () {
+              Future.delayed(const Duration(minutes: 1), () {
                 if (mounted && _activeRideId == rideRequest.id) {
                   _showPeriodicArrivalCheckDialog(rideRequest);
                 }

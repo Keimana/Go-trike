@@ -93,7 +93,7 @@ Eligibility
 
 User Conduct
 - Passengers must provide accurate booking details (pickup and drop-off).
-- Drivers must follow local Barangay TODA rules, traffic laws, and agreed booking terms.
+- Drivers must follow local Barangay Trike rules, traffic laws, and agreed booking terms.
 - Both parties must observe respectful and safe behavior during rides.
 
 Fares & Payments
@@ -149,11 +149,11 @@ Booking Process
 Responsibilities
 - Passengers: Ensure correct details and timely payment.
 - Drivers: Provide safe rides and respect agreed fares.
-- Admin/TODA: Manage user records, ride history, and enforce compliance with rules.
+- Admin/Trike: Manage user records, ride history, and enforce compliance with rules.
 
 Limitations of Liability
 - GoTrike serves as a platform and does not guarantee immediate ride availability.
-- The Barangay TODA and GoTrike developers are not liable for accidents, loss of property, or disputes, though reports will be recorded and investigated.
+- The Barangay Trike and GoTrike developers are not liable for accidents, loss of property, or disputes, though reports will be recorded and investigated.
 
 Account Security
 - Users are responsible for safeguarding login credentials.
@@ -169,7 +169,7 @@ Changes to Terms & Service
 
 Governing Law & Dispute Resolution
 - These Terms are governed by the laws of the Republic of the Philippines.
-- Disputes will be settled under the jurisdiction of the proper courts in San Fernando, Pampanga, with TODA mediation encouraged first.
+- Disputes will be settled under the jurisdiction of the proper courts in San Fernando, Pampanga, with Trike mediation encouraged first.
 
 Third-Party Services
 - The app may integrate services such as Google Maps and Firebase.
@@ -206,7 +206,7 @@ Use of Information
 
 Data Protection
 - All personal data is stored securely using Firebase/Firestore security rules.
-- Access is limited to authorized TODA admins.
+- Access is limited to authorized Trike admins.
 - Sensitive data is protected under the Data Privacy Act of 2012 (RA 10173).
 
 Data Retention

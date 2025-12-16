@@ -81,7 +81,7 @@ void showDriverOnWayModal(BuildContext context, String todaNumber) {
                     ),
                     const SizedBox(width: 8),
                     const Text(
-                      'Trike Number: ',
+                      'Tricycle Number: ',
                       style: TextStyle(
                         color: Colors.black87,
                         fontSize: 14,

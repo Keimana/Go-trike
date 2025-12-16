@@ -147,16 +147,16 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                               final navigator = Navigator.of(context);
                               final scaffoldMessenger = ScaffoldMessenger.of(context);
                               
-                              // Show TODA Number modal to get input
+                              // Show Tricycle Number modal to get input
                               final todaNumber = await showDialog<String>(
                                 context: context,
                                 builder: (dialogContext) =>
                                     const TerminalModalAccept(),
                               );
 
-                              print('TODA number entered: $todaNumber');
+                              print('Tricycle Number entered: $todaNumber');
 
-                              // If TODA number entered, accept the ride
+                              // If Tricycle Number entered, accept the ride
                               if (todaNumber != null && todaNumber.isNotEmpty) {
                                 // Check if still mounted
                                 if (!mounted) return;
@@ -175,9 +175,9 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                                 print('Attempting to update ride status...');
                                 print('Ride ID: ${rideRequest.id}');
                                 print('Terminal ID (from ride): $actualTerminalId');
-                                print('TODA Number: $todaNumber');
+                                print('Tricycle Number: $todaNumber');
 
-                                // Accept the ride with TODA number - USE ACTUAL TERMINAL ID
+                                // Accept the ride with Tricycle Number - USE ACTUAL TERMINAL ID
                                 try {
                                   final success = await RideRequestService
                                       .updateRideStatus(
@@ -198,7 +198,7 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                                     scaffoldMessenger.showSnackBar(
                                       SnackBar(
                                         content: Text(
-                                            'Ride accepted by TODA #$todaNumber'),
+                                            'Ride accepted by Trike #$todaNumber'),
                                         backgroundColor: Colors.green,
                                       ),
                                     );
@@ -230,7 +230,7 @@ class _TerminalRequestTrikeModalState extends State<TerminalRequestTrikeModal>
                                   }
                                 }
                               } else {
-                                print('TODA number dialog cancelled or empty');
+                                print('Tricycle Number dialog cancelled or empty');
                               }
                             },
                             onCancel: () async {

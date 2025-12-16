@@ -24,7 +24,7 @@ class _TerminalModalAcceptState extends State<TerminalModalAccept> {
     // Check if empty
     if (todaNumber.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter TODA Number")),
+        const SnackBar(content: Text("Please enter Tricycle Number")),
       );
       return;
     }
@@ -33,12 +33,12 @@ class _TerminalModalAcceptState extends State<TerminalModalAccept> {
     final isDigitsOnly = RegExp(r'^\d+$').hasMatch(todaNumber);
     if (!isDigitsOnly) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("TODA Number must contain digits only")),
+        const SnackBar(content: Text("Tricycle Number must contain digits only")),
       );
       return;
     }
 
-    // Return the TODA number to the caller
+    // Return the Tricycle Number to the caller
     Navigator.pop(context, todaNumber);
   }
 
@@ -69,7 +69,7 @@ class _TerminalModalAcceptState extends State<TerminalModalAccept> {
             const SizedBox(height: 24),
 
             const Text(
-              'Enter TODA Number',
+              'Enter Tricycle Number',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w400),
               textAlign: TextAlign.center,
             ),
@@ -84,7 +84,7 @@ class _TerminalModalAcceptState extends State<TerminalModalAccept> {
                 FilteringTextInputFormatter.digitsOnly,
               ],
               decoration: InputDecoration(
-                hintText: "TODA Number",
+                hintText: "Tricycle Number",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
