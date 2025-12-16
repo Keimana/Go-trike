@@ -700,7 +700,7 @@ class _MainScreenContentState extends State<MainScreenContent> {
     });
     showDriverOnWayModal(context, rideRequest.todaNumber ?? 'N/A');
     
-      Future.delayed(const Duration(minutes: 5), () {
+      Future.delayed(const Duration(minutes: 1), () {
         if (mounted && _activeRideId == rideRequest.id) {
           _showPeriodicArrivalCheckDialog(rideRequest);
         }
@@ -732,7 +732,7 @@ void _handleDriverArrived(RideRequest rideRequest) {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Has your trip reached the destination?',
+            'Has your driver arrived at the pickup location?',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
           ),
           const SizedBox(height: 12),
@@ -767,14 +767,14 @@ void _handleDriverArrived(RideRequest rideRequest) {
         TextButton(
           onPressed: () async {
             Navigator.of(context).pop();
-            await _completeRide(rideRequest);
+            await _startRide(rideRequest);
           },
           style: TextButton.styleFrom(
             backgroundColor: const Color(0xFF1B4871),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
           child: const Text(
-            'Yes, Arrived',
+            'Yes, Start Ride',
             style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
           ),
         ),
@@ -840,7 +840,7 @@ void _handleDriverArrived(RideRequest rideRequest) {
           TextButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              _completeRide(rideRequest);
+              await _startRide(rideRequest);
             },
             style: TextButton.styleFrom(
               backgroundColor: const Color(0xFF1B4871),
@@ -848,6 +848,79 @@ void _handleDriverArrived(RideRequest rideRequest) {
             ),
             child: const Text(
               'Yes, Arrived',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPeriodicCompletionCheckDialog(RideRequest rideRequest) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.flag, color: Color(0xFF1B4871), size: 28),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Ride Completion Check',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Has your trip reached the destination?',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'TODA Number: ${rideRequest.todaNumber ?? 'N/A'}',
+              style: const TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              Future.delayed(const Duration(minutes: 1), () {
+                if (mounted && _activeRideId == rideRequest.id) {
+                  _showPeriodicCompletionCheckDialog(rideRequest);
+                }
+              });
+            },
+            style: TextButton.styleFrom(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text(
+              'Not Yet',
+              style: TextStyle(color: Colors.grey, fontWeight: FontWeight.w600),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _completeRide(rideRequest);
+            },
+            style: TextButton.styleFrom(
+              backgroundColor: const Color(0xFF1B4871),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text(
+              'Yes, Complete',
               style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
             ),
           ),
@@ -891,6 +964,43 @@ void _handleDriverArrived(RideRequest rideRequest) {
     }
   }
 
+  Future<void> _startRide(RideRequest rideRequest) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
+    final success = await RideRequestService.updateRideStatus(
+      rideRequest.id,
+      rideRequest.assignedTerminal.id,
+      RideStatus.inProgress,
+      todaNumber: rideRequest.todaNumber,
+    );
+
+    if (mounted) {
+      Navigator.of(context).pop();
+
+      if (success) {
+        setState(() {
+          _isWaitingForDriverArrival = false;
+        });
+        _showSnackBar('✅ Ride started! On your way to destination.', Colors.green);
+        
+        // Start periodic completion check after 2 minutes
+        Future.delayed(const Duration(minutes: 2), () {
+          if (mounted && _activeRideId == rideRequest.id) {
+            _showPeriodicCompletionCheckDialog(rideRequest);
+          }
+        });
+      } else {
+        _showSnackBar('❌ Failed to start ride', Colors.red);
+      }
+    }
+  }
+
   void _showRideCompletedDialog() {
     showDialog(
       context: context,
@@ -903,7 +1013,7 @@ void _handleDriverArrived(RideRequest rideRequest) {
             SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Ride Completed!',
+                'Trip Completed',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.green),
               ),
             ),
